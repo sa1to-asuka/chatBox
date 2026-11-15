@@ -20,7 +20,7 @@ This project is a fork of [deepseek-ai/chat-demo](https://github.com/deepseek-ai
 
 ### Accounts and credits
 
-- Public sign-up plus admin-created accounts; roles: user, VIP, admin.
+- Admin-created accounts; set `ALLOW_REGISTRATION=1` to temporarily enable public sign-up. Roles: user, VIP, admin.
 - Daily credits by Beijing calendar day, charged as tokens × model multiplier; supports daily limits and unlimited accounts.
 - Credits are reserved before generation and settled afterwards, with stale reservations reconciled.
 - Usage center with daily allowance, reset time, 7-day trend, per-model stats and request history.
@@ -59,6 +59,8 @@ Set a random `CONFIG_SECRET` (at least 32 characters) in `.env`:
 openssl rand -hex 32
 ```
 
+Public registration is closed by default: create the first admin from the server, then create other accounts in the admin console. Set `ALLOW_REGISTRATION=1` in `.env` to temporarily open public sign-up.
+
 Create the first admin (password at least 12 characters):
 
 ```bash
@@ -76,6 +78,8 @@ pnpm server
 Open <http://127.0.0.1:3006>, sign in as the admin, then go to **Admin → Providers** to add a model endpoint.
 
 > `pnpm dev` only starts the frontend dev server on port 8090 and needs an API proxy; for local use the build + `pnpm server` flow above is the simplest.
+>
+> `better-sqlite3` ships prebuilt binaries for common platforms, so this repo skips its install script. The `Ignored build scripts: better-sqlite3` notice from pnpm is expected. If your platform has no matching prebuild, run `pnpm approve-builds` to compile it locally.
 
 ## Environment variables
 
@@ -89,6 +93,7 @@ Open <http://127.0.0.1:3006>, sign in as the admin, then go to **Admin → Provi
 | `COOKIE_SECURE` | `false` | Set to `true` when served over HTTPS |
 | `TRUST_PROXY` | `false` | Set to `true` behind a reverse proxy |
 | `CONFIG_SECRET` | none | **Required**; encrypts provider API keys. Never change it after setup |
+| `ALLOW_REGISTRATION` | unset | Public registration is closed when unset; set to `1` to open it temporarily |
 
 ## Deployment
 
@@ -172,6 +177,7 @@ scripts/             Backup and local mock upstream
 - Provider API keys stay on the server and are encrypted with `CONFIG_SECRET`; they are never sent to the browser.
 - Always set `CONFIG_SECRET` and serve over HTTPS (`COOKIE_SECURE=true`) in production.
 - Passwords are hashed with scrypt; disabling a user, changing their role or changing a password invalidates existing sessions.
+- Public registration is off by default and rate-limited per IP when enabled.
 - Write requests validate `Origin`; attachments are per-user; share links expose a read-only snapshot.
 - Never commit `.env`, `data/` or `backups/`.
 

@@ -68,11 +68,13 @@ export const ReplyArea = memo(function ReplyArea({
   const [open, setOpen] = useState(true)
   const titleActive = streaming && !hasResponse
   useTicker(titleActive, 1000)
-  if (view.steps.length === 0 && !(message.thinking && streaming)) {
+  // 有些模型接受思考开关却不下发思考内容；没有内容时只展示工具步骤，不显示“已思考 N 秒”。
+  const hasThinking = view.steps.some((step) => step.type === 'thinking')
+  const waitingThinking = message.thinking === true && streaming && !hasResponse
+  if (view.steps.length === 0 && !waitingThinking) {
     return null
   }
-  // 未记录请求开关时，按是否有思考内容显示标题。
-  const thinking = message.thinking ?? view.steps.some((step) => step.type === 'thinking')
+  const thinking = hasThinking || waitingThinking
   const title = thinking ? getAreaTitle(view, streaming, Date.now(), hasResponse) : null
   const stopped = !streaming && !hasResponse
   return (

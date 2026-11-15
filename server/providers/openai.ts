@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import type { ChatCompletionContentPart, ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import type { ChatInput, InputContent, Provider } from './shared.js'
-import { blockStart, blockStop, citationEvent, messageStart, messageStop, textEvent } from './shared.js'
+import { blockStart, blockStop, citationEvent, messageStart, messageStop, textEvent, thinkingEvent } from './shared.js'
 import type { ChatUsage, ProviderModel } from '../../shared/types.js'
 
 const content = (value: InputContent): string | ChatCompletionContentPart[] => {
@@ -30,12 +30,15 @@ export async function* streamOpenAI(provider: Provider, input: ChatInput): Async
   }, { signal: input.signal })
   yield messageStart(input.model)
   let index = -1
-  let started = false
+  let open: 'text' | 'thinking' | null = null
   let outputChars = 0
   const usage = input.usage
-  const startText = () => {
-    if (!started) { index++; started = true; return blockStart(index, 'text') }
-    return ''
+  const startBlock = (type: 'text' | 'thinking') => {
+    if (open === type) return ''
+    const close = open ? blockStop(index) : ''
+    open = type
+    index++
+    return close + blockStart(index, type)
   }
   for await (const chunk of stream) {
     if (chunk.usage) {
@@ -44,28 +47,42 @@ export async function* streamOpenAI(provider: Provider, input: ChatInput): Async
       usage.estimated = false
     }
     for (const choice of chunk.choices) {
-      const text = choice.delta.content
+      const delta = choice.delta as unknown as {
+        content?: string | null
+        reasoning_content?: string | null
+        reasoning?: string | null
+        annotations?: { type?: string; url_citation?: { url?: unknown; title?: unknown } }[]
+      }
+      // DeepSeek 用 reasoning_content，OpenRouter 等兼容接口用 reasoning；有就转成思考块。
+      const reasoning = typeof delta.reasoning_content === 'string'
+        ? delta.reasoning_content
+        : typeof delta.reasoning === 'string' ? delta.reasoning : ''
+      if (reasoning && input.thinking) {
+        const start = startBlock('thinking')
+        if (start) yield start
+        outputChars += [...reasoning].length
+        if (usage.estimated) usage.output = Math.ceil(outputChars / 2.5)
+        yield thinkingEvent(index, reasoning)
+      }
+      const text = delta.content
       if (text) {
-        const start = startText()
+        const start = startBlock('text')
         if (start) yield start
         outputChars += [...text].length
         if (usage.estimated) usage.output = Math.ceil(outputChars / 2.5)
         yield textEvent(index, text)
       }
-      const annotations = (choice.delta as unknown as {
-        annotations?: { type?: string; url_citation?: { url?: unknown; title?: unknown } }[]
-      }).annotations
-      for (const annotation of annotations ?? []) {
+      for (const annotation of delta.annotations ?? []) {
         if (annotation.type !== 'url_citation' || typeof annotation.url_citation?.url !== 'string') continue
         const url = annotation.url_citation.url
         if (!/^https?:\/\//i.test(url)) continue
-        const start = startText()
+        const start = startBlock('text')
         if (start) yield start
         yield citationEvent(index, url, typeof annotation.url_citation.title === 'string' ? annotation.url_citation.title : url)
       }
     }
   }
-  if (started) yield blockStop(index)
+  if (open) yield blockStop(index)
   if (usage.estimated) usage.output = Math.ceil(outputChars / 2.5)
   yield messageStop(usage)
   return usage

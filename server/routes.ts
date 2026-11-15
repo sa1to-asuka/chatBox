@@ -237,6 +237,7 @@ export const registerApi = (app: FastifyInstance) => {
       }
     } catch (error) {
       failed = abort.signal.aborted ? '用户停止生成' : error instanceof Error ? error.message : '上游服务错误'
+      request.log.error({ err: error }, 'chat stream failed')
       if (!abort.signal.aborted && !reply.raw.writableEnded) {
         const searchFailed = search && search !== undefined
         reply.raw.write(event('stream_error', searchFailed

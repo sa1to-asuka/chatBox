@@ -24,6 +24,8 @@ export const messageStop = (usage: { input: number; output: number }): string =>
   }) + event('message_stop', { type: 'message_stop' })
 export const textEvent = (index: number, text: string): string =>
   event('content_block_delta', { type: 'content_block_delta', index, delta: { type: 'text_delta', text } })
+export const thinkingEvent = (index: number, thinking: string): string =>
+  event('content_block_delta', { type: 'content_block_delta', index, delta: { type: 'thinking_delta', thinking } })
 export const citationEvent = (index: number, url: string, title: string): string =>
   event('content_block_delta', {
     type: 'content_block_delta', index,

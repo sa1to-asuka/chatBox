@@ -239,7 +239,7 @@ export const buildReplyView = (reply: AssistantMessage, streaming: boolean): Rep
       // 相邻思考块沿用同一个圆点和 Markdown；原始块与签名不变。
       if (mergedThinking) {
         mergedThinking.blocks.push(block)
-      } else if (block.thinking) {
+      } else if (block.thinking.trim()) {
         flushPreamble()
         mergedThinking = { type: 'thinking', key: `thinking-${index}`, blocks: [block] }
         steps.push(mergedThinking)
@@ -349,9 +349,11 @@ export const buildReplyView = (reply: AssistantMessage, streaming: boolean): Rep
 /** 思考总用时（秒）：各思考块用时之和，至少 1 秒；有块缺少用时时返回 null。 */
 export const getTotalThinkingSeconds = (steps: Step[], now: number) => {
   let total = 0
+  let hasThinking = false
   for (const step of steps) {
     if (step.type === 'thinking') {
       for (const block of step.blocks) {
+        hasThinking = true
         if (block.elapsedSeconds !== undefined) {
           total += block.elapsedSeconds * 1000
           continue
@@ -363,7 +365,7 @@ export const getTotalThinkingSeconds = (steps: Step[], now: number) => {
       }
     }
   }
-  return Math.max(1, Math.round(total / 1000))
+  return hasThinking ? Math.max(1, Math.round(total / 1000)) : 0
 }
 
 /** 折叠区标题 */
@@ -377,6 +379,9 @@ export const getAreaTitle = (
     const count = getTotalThinkingSeconds(view.steps, now)
     if (count === null) {
       return translate('thinkingSwitch')
+    }
+    if (count === 0) {
+      return null
     }
     return translate(count === 1 ? 'messageThinkDuration' : 'messageThinkDurationPlural', { count })
   }

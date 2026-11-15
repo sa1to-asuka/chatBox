@@ -54,6 +54,20 @@ export const useMobileViewport = (enabled: boolean) => {
     const viewport = window.visualViewport
     const inputSelector = 'textarea, input:not([type="file"])'
     let animationFrame = 0
+    let revealFrame = 0
+    /** 键盘挤压滚动容器后，把已聚焦的输入框带回可见区域。 */
+    const revealActiveInput = () => {
+      const active = document.activeElement
+      if (!(active instanceof HTMLElement) || !active.matches(inputSelector)) {
+        return
+      }
+      cancelAnimationFrame(revealFrame)
+      revealFrame = requestAnimationFrame(() => {
+        if (active.isConnected) {
+          active.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        }
+      })
+    }
     const reset = () => {
       frame.style.removeProperty('--app-viewport-height')
       frame.style.removeProperty('--app-viewport-top')
@@ -66,6 +80,7 @@ export const useMobileViewport = (enabled: boolean) => {
       // 失焦后直接恢复 CSS 的全高布局，不等 Safari 收键盘后的 resize。
       if (!document.activeElement?.matches(inputSelector)) {
         reset()
+        cancelAnimationFrame(revealFrame)
         return
       }
       frame.style.setProperty(
@@ -73,6 +88,7 @@ export const useMobileViewport = (enabled: boolean) => {
         `${viewport?.height ?? window.innerHeight}px`
       )
       frame.style.setProperty('--app-viewport-top', `${viewport?.offsetTop ?? 0}px`)
+      revealActiveInput()
     }
     const scheduleFrame = () => {
       cancelAnimationFrame(animationFrame)
@@ -98,6 +114,7 @@ export const useMobileViewport = (enabled: boolean) => {
     document.addEventListener('focusout', scheduleFrame)
     return () => {
       cancelAnimationFrame(animationFrame)
+      cancelAnimationFrame(revealFrame)
       viewport?.removeEventListener('resize', schedule)
       viewport?.removeEventListener('scroll', schedule)
       window.removeEventListener('resize', schedule)

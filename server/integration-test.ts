@@ -25,6 +25,7 @@ const upstream = createServer((request, response) => {
       const payload = JSON.parse(body) as { stream?: boolean; messages?: { role: string; content: unknown }[]; web_search_options?: unknown }
       lastMessages = payload.messages ?? []
       lastWebSearch = Boolean(payload.web_search_options)
+      const askedForReasoning = JSON.stringify(lastMessages).includes('思维链测试')
       if (!payload.stream) {
         response.writeHead(400)
         response.end()
@@ -34,7 +35,11 @@ const upstream = createServer((request, response) => {
       const chunk = (delta: object, finish: string | null = null, usage?: object) => response.write(
         `data: ${JSON.stringify({ id: 'mock', object: 'chat.completion.chunk', created: 1, model: 'mock-standard', choices: [{ index: 0, delta, finish_reason: finish }], ...(usage ? { usage } : {}) })}\n\n`
       )
-      chunk({ role: 'assistant', content: '你好，' })
+      if (askedForReasoning) {
+        chunk({ role: 'assistant', reasoning_content: '先分析一下。' })
+      } else {
+        chunk({ role: 'assistant', content: '你好，' })
+      }
       chunk(lastWebSearch ? { content: '本地测试成功。', annotations: [{ type: 'url_citation', url_citation: { url: 'https://example.com/source', title: '测试来源' } }] } : { content: '本地测试成功。' })
       chunk({}, 'stop', { prompt_tokens: 20, completion_tokens: 8, total_tokens: 28 })
       response.end('data: [DONE]\n\n')
@@ -123,8 +128,13 @@ try {
   await app.listen({ host: '127.0.0.1', port: 3007 })
   db.prepare('INSERT INTO users VALUES(?,?,?,?,?,?,0,0,?)').run('admin-id', 'admin', '管理员', hashPassword('testing-password'), 'admin', null, Date.now())
   await call('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'admin', password: 'testing-password' }) }, 'admin')
-  await call('/api/auth/register', { method: 'POST', body: JSON.stringify({ username: 'tester', displayName: '测试用户', password: 'testing-password' }) })
-  await call('/api/auth/register', { method: 'POST', body: JSON.stringify({ username: 'other', displayName: '其他用户', password: 'testing-password' }) }, 'other')
+  const authConfig = await call('/api/auth/config', {}, '') as { registration: boolean }
+  if (authConfig.registration !== false) throw new Error('默认应关闭公开注册')
+  await expectStatus(403, '/api/auth/register', { method: 'POST', body: JSON.stringify({ username: 'tester', displayName: '测试用户', password: 'testing-password' }) }, '')
+  await call('/api/admin/users', { method: 'POST', body: JSON.stringify({ username: 'tester', displayName: '测试用户', password: 'testing-password' }) }, 'admin')
+  await call('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'tester', password: 'testing-password' }) })
+  await call('/api/admin/users', { method: 'POST', body: JSON.stringify({ username: 'other', displayName: '其他用户', password: 'testing-password' }) }, 'admin')
+  await call('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'other', password: 'testing-password' }) }, 'other')
   await expectStatus(401, '/api/models', {}, '')
   const anonymous = await call('/api/auth/me', {}, '') as { user: unknown }
   if (anonymous.user !== null) throw new Error('未登录会话应返回空用户')
@@ -191,6 +201,10 @@ try {
   }
   const noSearchStream = await chat('test-chat', standardId, '不搜索', { history: [], search: false })
   if (lastWebSearch || !noSearchStream.includes('本地测试成功')) throw new Error('关闭搜索后仍发送 web_search_options')
+  const reasoningStream = await chat('test-chat', standardId, '思维链测试', { history: [], thinking: true })
+  if (!reasoningStream.includes('thinking_delta') || !reasoningStream.includes('先分析一下。') || !reasoningStream.includes('本地测试成功。')) {
+    throw new Error('OpenAI 兼容推理内容未转换为思考块')
+  }
 
   const richSession = {
     revision: 1, title: '搜索与分享测试', rootMessageId: 'u1',

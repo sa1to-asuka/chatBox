@@ -84,7 +84,7 @@ export const AdminUsers = ({ users, onChanged }: { users: PublicUser[]; onChange
     </div>
     {users.length === 0 ? <p className={styles.empty}>还没有用户，点击右上角“新建用户”。</p> : null}
     <p className={styles.hint}>管理员/普通用户角色变化、停用或改密后，旧登录会话会立即失效。创建管理员请谨慎。</p>
-    {creating ? <Modal title="新建用户" closable onClose={() => !busy && setCreating(false)} footer={<>
+    {creating ? <Modal title="新建用户" closable className={styles.wideModal} onClose={() => !busy && setCreating(false)} footer={<>
       <button type="button" className={styles.cancel} onClick={() => setCreating(false)}>取消</button>
       <button type="button" className={styles.primary} disabled={busy === 'create'} onClick={() => {
         const formElement = document.getElementById('admin-create-user-form') as HTMLFormElement | null
@@ -100,7 +100,13 @@ export const AdminUsers = ({ users, onChanged }: { users: PublicUser[]; onChange
             <option value="user">普通用户</option><option value="vip">VIP 用户</option><option value="admin">管理员</option>
           </select></label>
           <label>每日积分<input type="number" min="0" value={form.dailyQuota} onChange={(event) => setForm({ ...form, dailyQuota: event.target.value })} placeholder="留空使用角色默认值" /></label>
-          <label className={styles.checkbox}><input type="checkbox" checked={form.unlimited} onChange={(event) => setForm({ ...form, unlimited: event.target.checked })} />不限量积分</label>
+          <label className={styles.checkbox}>
+            <span>额度类型</span>
+            <span className={styles.checkboxRow}>
+              <input type="checkbox" checked={form.unlimited} onChange={(event) => setForm({ ...form, unlimited: event.target.checked })} />
+              不限量积分
+            </span>
+          </label>
         </div>
         <p className={styles.formHint}>创建后请将初始密码安全地交给用户；用户可在账户菜单中修改密码。</p>
       </form>

@@ -31,13 +31,15 @@
 .error, .notice { margin: 0; padding: 9px 12px; border-radius: 6px; font-size: 12px; }
 .error { color: #a8453b; background: #fff0eb; }
 .notice { color: #2e6444; background: #e8f3e8; }
-.form { min-width: min(560px, 75vw); }
+.form { min-width: 0; }
+.wideModal { width: 620px; }
 .formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 16px; }
-.formGrid label { display: flex; flex-direction: column; gap: 6px; color: var(--dsw-alias-label-secondary); font-size: 11px; }
-.formGrid input, .formGrid select { box-sizing: border-box; width: 100%; padding: 9px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: #fff; color: var(--dsw-alias-label-primary); font: inherit; font-size: 12px; }
-.formGrid input:focus, .formGrid select:focus { outline: 2px solid var(--dsw-alias-brand-primary); }
-.formGrid .checkbox { flex-direction: row; align-items: center; gap: 7px; }
-.formGrid .checkbox input { width: auto; accent-color: var(--dsw-alias-brand-primary); }
+.formGrid label { display: flex; flex-direction: column; gap: 6px; min-width: 0; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.formGrid input:not([type='checkbox']), .formGrid select { box-sizing: border-box; width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: #fff; color: var(--dsw-alias-label-primary); font: inherit; font-size: 12px; }
+.formGrid input:not([type='checkbox']):focus, .formGrid select:focus { outline: 2px solid var(--dsw-alias-brand-primary); }
+.formGrid .checkbox { align-self: stretch; }
+.formGrid .checkboxRow { display: flex; align-items: center; gap: 7px; box-sizing: border-box; min-height: 42px; padding: 0 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: #fff; color: var(--dsw-alias-label-primary); font-size: 12px; cursor: pointer; }
+.formGrid .checkboxRow input { width: auto; accent-color: var(--dsw-alias-brand-primary); }
 .formHint { margin: 16px 0 0; color: var(--dsw-alias-label-tertiary); font-size: 10px; line-height: 1.7; }
 .cancel, .primary { height: 32px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: #fff; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; cursor: pointer; }
 .primary { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-brand-primary); color: #fff; }
@@ -56,6 +58,6 @@
   .row { grid-template-columns: 1fr; }
   .intro { align-items: flex-start; flex-direction: column; }
   .createButton { align-self: stretch; justify-content: center; }
-  .form { min-width: 0; width: min(100%, 72vw); }
+  .form { min-width: 0; width: 100%; }
   .formGrid { grid-template-columns: 1fr; }
 }

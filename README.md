@@ -20,7 +20,7 @@
 
 ### 账户与额度
 
-- 公开注册 + 管理员创建账号；角色分为普通用户、VIP、管理员。
+- 管理员创建账号；设置 `ALLOW_REGISTRATION=1` 可临时开放公开注册。角色分为普通用户、VIP、管理员。
 - 按自然日（北京时间）发放积分，按 token × 模型倍率计费；支持每日限额与不限量账号。
 - 生成前预留、生成后结算，异常中断会回收预留积分。
 - 积分与用量中心：今日额度、重置时间、最近 7 天趋势、按模型统计与请求明细。
@@ -59,6 +59,8 @@ cp .env.example .env
 openssl rand -hex 32
 ```
 
+默认不开放公开注册：先在服务器上创建首个管理员，之后由管理员在后台创建其他账号。如需临时开放注册，在 `.env` 中设置 `ALLOW_REGISTRATION=1`。
+
 创建首个管理员（密码至少 12 位）：
 
 ```bash
@@ -76,6 +78,8 @@ pnpm server
 打开 <http://127.0.0.1:3006>，使用刚创建的管理员登录，然后进入 **管理后台 → 供应商** 添加模型接口。
 
 > `pnpm dev` 只启动前端开发服务器（8090），接口需要自行配置代理；日常本地运行直接使用上面的构建 + `pnpm server` 即可。
+>
+> `better-sqlite3` 自带各平台预编译二进制，因此本仓库跳过它的构建脚本，`pnpm install` 时出现 `Ignored build scripts: better-sqlite3` 属正常现象。如果你的平台没有对应预编译包，执行 `pnpm approve-builds` 允许本地编译。
 
 ## 环境变量
 
@@ -89,6 +93,7 @@ pnpm server
 | `COOKIE_SECURE` | `false` | HTTPS 部署时设为 `true` |
 | `TRUST_PROXY` | `false` | 位于反向代理之后时设为 `true` |
 | `CONFIG_SECRET` | 无 | **必填**，用于加密数据库中的供应商 API Key；设置后不要更换 |
+| `ALLOW_REGISTRATION` | 未设置 | 空值表示关闭公开注册（由管理员创建账号）；设为 `1` 临时开放 |
 
 ## 部署
 
@@ -172,6 +177,7 @@ scripts/             备份与本地 mock 上游
 - 上游 API Key 只保存在服务端数据库，使用 `CONFIG_SECRET` 加密；不会返回给浏览器。
 - 生产环境必须设置 `CONFIG_SECRET`，并通过 HTTPS 访问（`COOKIE_SECURE=true`）。
 - 密码使用 scrypt 哈希；用户被停用、角色变更或修改密码后，旧会话立即失效。
+- 公开注册默认关闭；开放期间仍受 IP 注册频率限制。
 - 写操作会校验 `Origin`，附件按用户隔离，分享链接只暴露只读快照。
 - 不要把 `.env`、`data/`、`backups/` 提交到 Git。
 

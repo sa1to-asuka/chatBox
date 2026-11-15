@@ -6,6 +6,8 @@ import { createSession, currentUser, extendSession, hashPassword, publicUser, to
 import { displayName, password, username } from './validation.js'
 
 const attempts = new Map<string, { count: number; reset: number }>()
+/** 默认关闭公开注册；需要时在环境变量设置 ALLOW_REGISTRATION=1。 */
+const registrationOpen = () => process.env.ALLOW_REGISTRATION === '1'
 const rateLimit = (request: { ip: string }, max: number) => {
   const now = Date.now()
   const entry = attempts.get(request.ip)
@@ -17,8 +19,10 @@ const rateLimit = (request: { ip: string }, max: number) => {
   if (attempts.size > 10000) attempts.clear()
 }
 export const registerAuth = (app: FastifyInstance) => {
+  app.get('/api/auth/config', async () => ({ registration: registrationOpen() }))
   app.post('/api/auth/register', async (request, reply) => {
     try {
+      if (!registrationOpen()) throw new HttpError(403, '暂未开放公开注册，请联系管理员创建账号')
       rateLimit(request, 5)
       const data = body(request)
       const name = username(data.username)
