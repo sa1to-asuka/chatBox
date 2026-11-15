@@ -1,0 +1,36 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 230px;
+}
+
+.select {
+  max-width: 230px;
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.empty button {
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-brand-text);
+  font: inherit;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .wrap,
+  .select {
+    max-width: 142px;
+  }
+}

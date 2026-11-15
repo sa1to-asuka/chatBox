@@ -1,5 +1,5 @@
 import { useTranslate } from '../../i18n/index.js'
-import { memo, useEffect, useMemo, useReducer, useState } from 'react'
+import { memo, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react'
 import Prism from 'prismjs'
 import {
   getHighlightLang,
@@ -10,6 +10,7 @@ import { IconCheckOutline16, IconCopyOutline16 } from '../base/icons.js'
 import { showToast } from '../base/toastState.js'
 import { copyText } from '../../utils/clipboard.js'
 import { MermaidDiagram } from './MermaidDiagram.js'
+import { SvgBlock } from './SvgBlock.js'
 import styles from './CodeBlock.module.css'
 
 /** 代码块标题栏：左侧语言名，右侧复制 */
@@ -18,17 +19,19 @@ const CodeInfoRow = ({
   infostring,
   showDiagram,
   onToggleDiagram,
+  left,
 }: {
   code: string
   infostring: string
   showDiagram: boolean
   onToggleDiagram?: () => void
+  left?: ReactNode
 }) => {
   const t = useTranslate()
   const [copied, setCopied] = useState(false)
   return (
     <div className={styles.container}>
-      {onToggleDiagram ? (
+      {left ?? (onToggleDiagram ? (
         <div className="md-code-block-switch" aria-label={t('mermaidSwitchLabel')}>
           <button
             type="button"
@@ -49,7 +52,7 @@ const CodeInfoRow = ({
         </div>
       ) : (
         <span className={styles.name}>{infostring}</span>
-      )}
+      ))}
       <button
         type="button"
         className={styles.button}
@@ -74,12 +77,16 @@ export const CodeBlock = memo(function CodeBlock({
   code,
   infostring,
   loading = false,
+  shareToken,
 }: {
   code: string
   infostring: string
   loading?: boolean
+  shareToken?: string
 }) {
-  const isMermaid = infostring.toLowerCase() === 'mermaid'
+  const language = infostring.toLowerCase()
+  const isMermaid = language === 'mermaid'
+  const isSvg = language === 'svg' || ((!language || language === 'xml' || language === 'html') && /<svg[\s>]/i.test(code) && code.trim().length < 300_000)
   const [showDiagram, setShowDiagram] = useState(true)
   // 语言包注册在全局 Prism 上，每次渲染直接判断；加载完成后触发一次重渲染
   const rerender = useReducer((n: number) => n + 1, 0)[1]
@@ -111,10 +118,16 @@ export const CodeBlock = memo(function CodeBlock({
           infostring={infostring}
           showDiagram={showDiagram}
           onToggleDiagram={isMermaid ? () => setShowDiagram((show) => !show) : undefined}
+          left={isSvg ? <div className={styles.switcher}>
+            <button type="button" className={styles.button} aria-pressed={showDiagram} onClick={() => setShowDiagram(true)}>预览</button>
+            <button type="button" className={styles.button} aria-pressed={!showDiagram} onClick={() => setShowDiagram(false)}>源码</button>
+          </div> : undefined}
         />
       </div>
       {isMermaid && showDiagram ? (
         <MermaidDiagram code={code} loading={loading} />
+      ) : isSvg && showDiagram && !loading ? (
+        <SvgBlock code={code} shareToken={shareToken} />
       ) : (
         <pre dangerouslySetInnerHTML={{ __html: renderedHtml }}></pre>
       )}

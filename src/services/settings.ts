@@ -88,7 +88,7 @@ const initialThemePreference = (): ThemePreference => {
 const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide' : 'stella')
 
 export const useSettings = create<Settings>(() => ({
-  apiKey: read(KEYS.apiKey),
+  apiKey: null,
   locale: initialLocale(),
   location: initialLocation(),
   themePreference: initialThemePreference(),

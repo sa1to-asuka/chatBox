@@ -121,6 +121,10 @@
   margin-left: -18px;
 }
 .ds-markdown .ds-markdown-task-list-item > .ds-markdown-task-checkbox {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+  vertical-align: -2px;
   color: var(--dsw-alias-label-secondary);
 }
 .ds-markdown .ds-markdown-task-list-item > .ds-markdown-task-checkbox + .ds-markdown-paragraph {

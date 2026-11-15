@@ -1,20 +1,30 @@
 import { useEffect } from 'react'
+import { useAuth, refreshUser } from '../services/auth.js'
+import { AuthPage } from '../components/auth/AuthPage.js'
+import { loadModels, resetModels } from '../services/models.js'
+import { loadFolders, resetFolders } from '../services/chat/folders.js'
+import { navigate, usePathname } from '../services/navigation.js'
+import { AdminPage } from '../components/admin/AdminPage.js'
+import { UsagePage } from '../components/usage/UsagePage.js'
+import { SharePage } from '../components/share/SharePage.js'
 import { useTranslate } from '../i18n/index.js'
 import { useSettings } from '../services/settings.js'
 import { useIsMobile, useMobileViewport, usePreventPageScroll } from './viewport.js'
 import {
   bindChatPersistence,
   initChat,
+  resetChat,
   retrySaveSessions,
   selectSession,
   useChatStore,
 } from '../services/chat/store.js'
 import { SearchPanel } from '../components/search/SearchPanel.js'
+import { SessionSearch } from '../components/search/SessionSearch.js'
+import { closeGlobalSearch, openGlobalSearch } from '../components/search/globalSearchState.js'
 import { closeSearchPanel } from '../components/search/searchPanelState.js'
 import { SessionView } from '../components/session/SessionView.js'
 import { MobileHeader } from '../components/session/MobileHeader.js'
 import { Welcome } from '../components/session/Welcome.js'
-import { ensureApiKey } from '../components/settings/settingsDialogState.js'
 import { SettingsDialog } from '../components/settings/SettingsDialog.js'
 import { Toast } from '../components/base/Toast.js'
 import { showToast } from '../components/base/toastState.js'
@@ -49,12 +59,35 @@ export const App = () => {
     state.activeId === null ? false : Object.hasOwn(state.streaming, state.activeId)
   )
   const activeId = useChatStore((state) => state.activeId)
+  const auth = useAuth()
+  const pathname = usePathname()
+  const adminRoute = pathname === '/admin'
+  const usageRoute = pathname === '/usage'
+  const shareMatch = /^\/s\/([A-Za-z0-9_-]{30,100})$/.exec(pathname)
+  const shareRoute = Boolean(shareMatch)
 
-  usePreventPageScroll(isMobile)
+  usePreventPageScroll(isMobile && !adminRoute && !usageRoute && !shareRoute)
+  useEffect(() => { void refreshUser() }, [])
+  useEffect(() => {
+    document.title = shareRoute ? '分享的对话 · Chatbox' : adminRoute ? '管理后台 · Chatbox' : usageRoute ? '积分与用量 · Chatbox' : 'Chatbox'
+    if (adminRoute && auth.status === 'authenticated' && auth.user?.role !== 'admin') {navigate('/', true)}
+  }, [shareRoute, adminRoute, usageRoute, auth.status, auth.user?.role])
 
   useEffect(() => {
     document.documentElement.lang = locale
   }, [locale])
+
+  useEffect(() => {
+    if (auth.status !== 'authenticated' || shareRoute || adminRoute || usageRoute) {return}
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        openGlobalSearch()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [auth.status, shareRoute, adminRoute, usageRoute])
 
   // 文件数、存储空间达到上限时，附件上只显示「上传失败」，原因用 toast 说明
   useEffect(() => onUploadNotice(showToast), [])
@@ -68,10 +101,26 @@ export const App = () => {
   useEffect(closeMobileSider, [activeId, isMobile])
 
   useEffect(() => {
-    void initChat()
-    // 首次打开先在设置里输入 API Key
-    ensureApiKey()
-  }, [])
+    if (shareRoute) {return}
+    if (auth.status === 'authenticated') {
+      void initChat()
+      void loadModels()
+      void loadFolders()
+    } else if (auth.status === 'anonymous') {
+      resetChat()
+      resetModels()
+      resetFolders()
+      closeGlobalSearch()
+    }
+  }, [auth.status, shareRoute])
+  if (shareMatch) {return <SharePage token={shareMatch[1]} />}
+  if (auth.status !== 'authenticated') {return auth.status === 'loading' ? <div className={styles.boot}>正在准备工作空间…</div> : <AuthPage />}
+  if (adminRoute) {
+    return auth.user?.role === 'admin'
+      ? <AdminPage />
+      : <div className={styles.boot}>此页面仅管理员可访问，正在返回聊天…</div>
+  }
+  if (usageRoute) {return <UsagePage />}
 
   return (
     <>
@@ -132,6 +181,7 @@ export const App = () => {
         </main>
         <SearchPanel />
       </div>
+      <SessionSearch />
       <SettingsDialog />
       <Toast />
     </>

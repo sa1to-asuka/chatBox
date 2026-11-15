@@ -2,7 +2,6 @@ import clsx from 'clsx'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import {
   IconGlobeLanguageOutline14,
-  IconPaperclipOutline16,
   IconSendOutline16,
   IconStopFill16,
   IconThinkOutline14,
@@ -21,17 +20,18 @@ import {
   useDrafts,
 } from '../../services/chat/drafts.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
-import { IconButton } from '../base/IconButton.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { ensureApiKey } from '../settings/settingsDialogState.js'
 import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
-import { ACCEPT, useUploads } from '../../services/attachments.js'
+import { isImage, resolveMimeType, useUploads } from '../../services/attachments.js'
 import { DraftAttachments } from './DraftAttachments.js'
 import { useVoiceInput } from './useVoiceInput.js'
-import { VoiceButton } from './VoiceButton.js'
 import { Spectrum } from './Spectrum.js'
 import { useTranslate } from '../../i18n/index.js'
+import { ModelPicker } from './ModelPicker.js'
+import { AttachmentPicker } from './AttachmentPicker.js'
+import { useModels } from '../../services/models.js'
 import styles from './ChatInput.module.css'
 
 /** 输入框：自适应高度的文本框 + 文件 + 深度思考与智能搜索开关 + 语音输入 + 发送 / 停止 */
@@ -53,7 +53,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const selectedModel = useModels((state) => state.models.find((model) => model.id === state.selected))
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const togglesRef = useRef<HTMLDivElement>(null)
 
@@ -76,6 +76,14 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
 
   const acceptFiles = (files: File[]) => {
     if (files.length === 0 || useChatStore.getState().importingHistory || !ensureApiKey()) {
+      return
+    }
+    if (!selectedModel) {
+      showToast('当前没有可用模型，请联系管理员配置模型')
+      return
+    }
+    if (!selectedModel.capabilities.vision && files.some((file) => isImage(resolveMimeType(file)))) {
+      showToast('当前模型不支持图片，请切换支持视觉的模型')
       return
     }
     const error = addDraftFiles(sessionId, files, useSettings.getState().apiKey ?? '')
@@ -130,9 +138,18 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const recording = voice.status === 'recording'
 
   // 排队、上传中或上传失败的附件都留在输入框，全部上传成功后才能发送
-  const canSend = !importingHistory && !streaming && voice.status === 'idle' && draftReady
+  useEffect(() => {
+    if (selectedModel && !selectedModel.capabilities.thinking && thinking) {setThinking(false)}
+    if (selectedModel && !selectedModel.capabilities.search && search) {setSearch(false)}
+  }, [selectedModel, thinking, search])
+
+  const canSend = !importingHistory && !streaming && voice.status === 'idle' && draftReady && Boolean(selectedModel)
 
   const send = () => {
+    if (!selectedModel) {
+      showToast('当前没有可用模型，请联系管理员配置模型')
+      return
+    }
     if (
       useChatStore.getState().importingHistory ||
       voice.status !== 'idle' ||
@@ -202,7 +219,8 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
       <div className={styles.functionRow}>
         {/* 深度思考 / 智能搜索开关，tooltip 在按钮上方 */}
         <div ref={togglesRef} className={styles.toggles}>
-          <Tooltip content={t('deactivatedThinkTooltip')}>
+          <ModelPicker />
+          {selectedModel?.capabilities.thinking ? <Tooltip content={t('deactivatedThinkTooltip')}>
             <button
               type="button"
               className={clsx(styles.toggle, thinking && styles.selected)}
@@ -213,8 +231,8 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <IconThinkOutline14 />
               <span className={styles.toggleLabel}>{t('thinkingSwitch')}</span>
             </button>
-          </Tooltip>
-          <Tooltip content={t('deactivatedSearchTooltip')}>
+          </Tooltip> : null}
+          {selectedModel?.capabilities.search ? <Tooltip content={t('search')}>
             <button
               type="button"
               className={clsx(styles.toggle, search && styles.selected)}
@@ -225,41 +243,10 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               <IconGlobeLanguageOutline14 />
               <span className={styles.toggleLabel}>{t('search')}</span>
             </button>
-          </Tooltip>
+          </Tooltip> : null}
         </div>
         <div className={styles.right}>
-          <VoiceButton
-            status={voice.status}
-            disabled={!voice.available}
-            seconds={voice.seconds}
-            onClick={() => {
-              if (
-                voice.status !== 'idle' ||
-                (!useChatStore.getState().importingHistory && ensureApiKey())
-              ) {
-                void voice.toggle()
-              }
-            }}
-          />
-          <IconButton
-            size="m"
-            tone="primary"
-            icon={<IconPaperclipOutline16 />}
-            tooltip={t('uploadFile')}
-            disabled={importingHistory}
-            onClick={() => ensureApiKey() && fileInputRef.current?.click()}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            hidden
-            accept={ACCEPT}
-            onChange={(event) => {
-              acceptFiles(Array.from(event.target.files ?? []))
-              event.target.value = ''
-            }}
-          />
+          <AttachmentPicker onFiles={acceptFiles} disabled={importingHistory} />
           {streaming && sessionId ? (
             <button
               type="button"

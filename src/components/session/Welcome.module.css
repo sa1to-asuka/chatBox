@@ -66,3 +66,19 @@
     user-select: none;
   }
 }
+
+.folderContext {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: var(--dsw-alias-button-ghost-active-fill);
+  color: var(--dsw-alias-brand-text);
+  font-size: 11px;
+}
+.folderContext span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folderContext button { display: grid; place-items: center; width: 19px; height: 19px; margin-left: auto; padding: 0; border: 0; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
+.folderContext button:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.folderContext svg { width: 12px; height: 12px; }

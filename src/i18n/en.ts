@@ -110,13 +110,13 @@ export const en = {
   confirm: 'Confirm',
   apiKeyInvalid: 'Invalid API Key. Please check it and try again.',
   apiKeyVerificationFailed: 'Verification failed: {message}',
-  historyImport: 'Import chat history',
+  historyImport: 'Import chat history (unavailable)',
   historyImportConfirm: 'Import',
   historyImportConfirmTitle: 'Import chat history?',
   historyImportConfirmDescription:
     'The uploaded chat history will replace all your current chats. Import anyway?',
   historyImportDescription:
-    'Importing chat history replaces all local chats and attachments. Supports ZIP files exported from DeepSeek.',
+    'Chats are stored on the server; legacy ZIP import has not been migrated yet. Use per-chat export instead.',
   historyImportedOne: 'Imported 1 chat',
   historyImported: 'Imported {count} chats',
   historyImportFailed:
@@ -124,12 +124,12 @@ export const en = {
   historyExportFailed: 'Export failed: {message}',
   exportAllLabel: 'Export all chats',
   historyExportDescription:
-    'Includes all chat history and locally stored images. Other attachments retain file details only. Your API Key is not included.',
+    'Includes all chats and images stored on the server. Your API Key is not included.',
   exportAllDownload: 'Download',
   deleteAllSessions: 'Delete all chats',
   deleteAllSessionsModalTitle: 'Once deleted, all chats will be cleared and cannot be recovered.',
   deleteAllSessionsModalDescription:
-    'Locally saved attachments and unsent drafts will also be deleted.',
+    'Attachments stored on the server and unsent drafts will also be deleted.',
   historyDeleting: 'Deleting...',
   historyDeleted: 'Successfully deleted.',
   historyDeleteFailed: 'Failed to delete chats. Please try again.',

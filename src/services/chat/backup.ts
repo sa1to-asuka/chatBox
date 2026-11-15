@@ -1,6 +1,6 @@
 import { formatDate } from '../../utils/format.js'
 import * as db from './db.js'
-import { replaceHistory, useChatStore } from './store.js'
+import { clearServerHistory, replaceHistory, useChatStore } from './store.js'
 import type { Session } from './types.js'
 
 export { BackupError } from './history/errors.js'
@@ -50,8 +50,8 @@ export const importHistory = (file: File): Promise<number> =>
     return replaceHistory(() => importArchive(file))
   })
 
-/** 确认删除后调用：以空历史原子替换全部本地会话与附件，保留 API Key 和其他设置。 */
+/** 确认删除后调用：删除服务器上的会话与附件，并同步清空当前界面。 */
 export const clearHistory = (): Promise<void> =>
   enqueueBackup(async () => {
-    await replaceHistory(async () => {})
+    await clearServerHistory()
   })

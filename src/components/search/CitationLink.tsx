@@ -2,6 +2,7 @@ import type { MouseEvent } from 'react'
 import type { Source } from '../../services/chat/view.js'
 import { HoverCard, type HoverCardTrigger } from './HoverCard.js'
 import { SourceCard } from './SourceCard.js'
+import { safeExternalHttpUrl } from '../../utils/url.js'
 
 /**
  * 正文里 [citation:N] 的数字角标：悬停预览来源，点击新标签打开。
@@ -11,7 +12,8 @@ export const CitationLink = ({ source }: { source: Source }) => {
   const open = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault()
     event.stopPropagation()
-    window.open(source.url, '_blank', 'noopener,noreferrer')
+    const href = safeExternalHttpUrl(source.url)
+    if (href) {window.open(href, '_blank', 'noopener,noreferrer')}
   }
   const renderTrigger: HoverCardTrigger = ({ domRef, domProps }) => (
     <span ref={domRef} className="ds-markdown-cite" {...domProps} role="link" onClick={open}>

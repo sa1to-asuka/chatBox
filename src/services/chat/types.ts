@@ -97,6 +97,7 @@ export type AssistantMessage = MessageBranch & {
     kind: ApiErrorKind | 'upload'
     message: string
     status?: number
+    code?: string
     localMessage?: TranslationMessage
     /** 仅 upload：重新上传是否可能成功（网络、限流、服务端繁忙）；过大、格式不支持为 false */
     retryable?: boolean
@@ -114,10 +115,15 @@ export type Session = {
   messages: Message[]
   /** undefined 表示线性消息列表；null 表示空会话。 */
   rootMessageId?: string | null
+  revision?: number
 }
 
 /** 会话列表元数据；消息只在打开会话时加载。 */
-export type SessionSummary = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt'>
+export type SessionSummary = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt'> & {
+  pinned?: boolean
+  pinnedAt?: number | null
+  folderId?: string | null
+}
 
 /** 显式提取字段，避免将完整会话的消息带进列表。 */
 export const toSessionSummary = (session: SessionSummary): SessionSummary => ({
@@ -125,4 +131,7 @@ export const toSessionSummary = (session: SessionSummary): SessionSummary => ({
   title: session.title,
   createdAt: session.createdAt,
   updatedAt: session.updatedAt,
+  pinned: session.pinned,
+  pinnedAt: session.pinnedAt,
+  folderId: session.folderId,
 })

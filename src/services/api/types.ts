@@ -48,7 +48,7 @@ export type ServerToolUseBlock = {
   /** srvtoolu_{s|ds|rl|is|dis}_{序号}_{32 位 hex} */
   id: string
   /** 文字搜索与图搜均为 deepseek_web_search；read_link 为 deepseek_read_url */
-  name: 'deepseek_web_search' | 'deepseek_read_url'
+  name: 'deepseek_web_search' | 'deepseek_read_url' | 'web_search'
   input: ServerToolInput
   caller: { type: 'direct' }
   kind: ServerToolKind

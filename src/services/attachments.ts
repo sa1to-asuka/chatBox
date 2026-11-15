@@ -1,19 +1,22 @@
 import { create } from 'zustand'
 import type { LinkedMessage, TranslationMessage } from '../i18n/index.js'
-import { uploadFile } from './api/client.js'
 import { classifyApiError, getUploadErrorInfo, isRetryableApiError } from './api/errors.js'
 import type { FilePurpose } from './api/types.js'
-import { ACCEPT_FILE_EXTS } from './uploadExts.js'
 
-/** 允许上传的扩展名，按扩展名白名单过滤，清单见 uploadExts.ts */
-export const ACCEPTED_EXTS = ACCEPT_FILE_EXTS
+/** 支持的上传类型；服务端还会校验真实文件内容和所有权 */
+export const ACCEPTED_EXTS = [
+  'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'docx',
+  'txt', 'md', 'markdown', 'csv', 'json', 'jsonl', 'xml', 'yaml', 'yml', 'log',
+  'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'h', 'cpp', 'hpp', 'cs', 'go', 'rs',
+  'php', 'rb', 'sh', 'sql', 'css', 'html', 'vue',
+]
 /** 选择文件对话框的过滤条件 */
 export const ACCEPT = ACCEPTED_EXTS.map((ext) => `.${ext}`).join(',')
-/** 单文件大小上限与 Files API 一致 */
-export const MAX_SIZE_MB = 64
+/** 单文件大小上限与服务端一致 */
+export const MAX_SIZE_MB = 32
 /** 按 user_data 上传的文件（纯文本、代码、表格、电子书）原文件上限更小 */
 export const MAX_USER_DATA_SIZE_MB = 32
-export const MAX_COUNT = 50
+export const MAX_COUNT = 10
 /** 同时上传的文件数 */
 const MAX_CONCURRENT = 3
 
@@ -118,10 +121,10 @@ const next = () => {
 
 /** 排队上传，最多同时上传 MAX_CONCURRENT 个；排队期间中止的任务不会发出请求 */
 const enqueueUpload = (
-  apiKey: string,
+  _apiKey: string,
   file: Blob,
   name: string,
-  isImage: boolean,
+  _isImage: boolean,
   signal: AbortSignal
 ) =>
   new Promise<string>((resolve, reject) => {
@@ -131,8 +134,12 @@ const enqueueUpload = (
         return
       }
       try {
-        const body = file instanceof File ? file : new File([file], name, { type: file.type })
-        resolve((await uploadFile(apiKey, body, getUploadPurpose(name, isImage), signal)).id)
+        const form = new FormData()
+        form.append('file', file instanceof File ? file : new File([file], name, { type: file.type }))
+        const response = await fetch('/api/files', { method: 'POST', body: form, signal })
+        const result = await response.json() as { id?: string; error?: string }
+        if (!response.ok || !result.id) {throw new Error(result.error ?? '上传失败')}
+        resolve(result.id)
       } catch (error) {
         reject(error)
       }

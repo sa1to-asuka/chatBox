@@ -1,0 +1,64 @@
+.page {
+  --dsw-alias-label-primary: #1b2a21;
+  --dsw-alias-label-secondary: #56665a;
+  --dsw-alias-label-tertiary: #87958b;
+  --dsw-alias-bg-base: #fff;
+  --dsw-alias-border-l1: #e3e9e2;
+  --dsw-alias-border-l2: #d6dfd7;
+  --dsw-alias-brand-primary: #2b5d45;
+  --dsw-alias-brand-text: #2b5d45;
+  --dsw-alias-markdown-code-block: #f6f8f5;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: #1b2a21;
+  background: #f7f9f5;
+  font-family: var(--dsw-font-family);
+}
+.header { display: flex; align-items: center; gap: 14px; height: 62px; padding: 0 clamp(18px, 5vw, 48px); border-bottom: 1px solid #e1e8e1; background: rgba(247, 249, 245, .94); }
+.brand { display: flex; align-items: center; gap: 9px; margin-right: auto; color: inherit; font-size: 16px; font-weight: 600; text-decoration: none; }
+.logo { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 8px; background: #2b5d45; color: #fff; font-family: Georgia, serif; font-size: 18px; }
+.viewOnly { padding: 4px 8px; border: 1px solid #d6dfd7; border-radius: 100px; color: #748476; font-size: 10px; }
+.header button { border: 0; background: transparent; color: #5e7064; font: inherit; font-size: 12px; cursor: pointer; padding: 7px 8px; border-radius: 6px; }
+.header button:hover { background: #e9f0e9; }
+.content { width: min(100%, 860px); margin: 0 auto; padding: 52px 28px 80px; box-sizing: border-box; }
+.heading { padding-bottom: 28px; border-bottom: 1px solid #dfe7df; }
+.heading p { margin: 0 0 12px; color: #8ba08f; font-size: 9px; letter-spacing: .2em; }
+.heading h1 { margin: 0 0 10px; font-size: clamp(28px, 5vw, 42px); line-height: 1.25; letter-spacing: -.04em; font-weight: 480; }
+.heading span { color: #929e94; font-size: 11px; }
+.messages { display: flex; flex-direction: column; gap: 34px; padding: 34px 0 16px; }
+.user { align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 9px; max-width: 78%; }
+.userText { margin: 0; padding: 11px 15px; border-radius: 15px 15px 4px 15px; background: #e8f0e8; color: #273b2d; font-size: 14px; line-height: 1.75; white-space: pre-wrap; }
+.files { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.files a { display: block; width: 150px; overflow: hidden; border-radius: 9px; border: 1px solid #dfe7df; background: #fff; }
+.files img { display: block; width: 100%; height: auto; max-height: 220px; object-fit: cover; }
+.fileName { padding: 6px 9px; border: 1px solid #dfe7df; border-radius: 6px; background: #fff; color: #647468; font-size: 11px; }
+.assistant { max-width: 100%; }
+.assistantHead { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #2d4b36; font-size: 12px; font-weight: 600; }
+.miniLogo { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: #2b5d45; color: #fff; font-family: Georgia, serif; font-size: 13px; }
+.sources { display: flex; flex-direction: column; gap: 5px; margin-top: 18px; padding-top: 12px; border-top: 1px solid #e3e9e2; }
+.sources span { display: flex; align-items: center; gap: 5px; color: #89988d; font-size: 10px; }
+.sources a { color: #567763; font-size: 11px; line-height: 1.5; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sources a:hover { text-decoration: underline; }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dfe7df; color: #94a097; font-size: 10px; }
+.footer a { color: #4d725a; font-size: 11px; text-decoration: none; }
+.loading { padding: 120px 0; color: #8b998e; text-align: center; font-size: 13px; }
+.error { padding: 100px 20px; text-align: center; }
+.error h1 { font-size: 26px; font-weight: 500; margin: 0 0 10px; }
+.error p { color: #8b998e; font-size: 13px; margin: 0 0 22px; }
+.error a { color: #2b5d45; font-size: 13px; }
+@media (max-width: 640px) {
+  .header { height: 56px; padding-top: env(safe-area-inset-top); box-sizing: content-box; }
+  .content { padding: 30px 17px 54px; }
+  .user { max-width: 88%; }
+  .messages { gap: 28px; padding-top: 25px; }
+  .heading h1 { font-size: 28px; }
+}
+@media print {
+  .page { background: #fff; }
+  [data-print-hide] { display: none !important; }
+  .content { width: 100%; padding: 0; }
+  .messages { gap: 22px; }
+  .userText { background: #f1f4f0; }
+  .files a { width: 110px; }
+}

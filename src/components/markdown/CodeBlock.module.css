@@ -45,3 +45,6 @@
     height: 14px;
   }
 }
+
+.switcher { display: flex; align-items: center; gap: 2px; padding-left: 4px; }
+.switcher .button[aria-pressed="true"] { color: var(--dsw-alias-brand-text); background: var(--dsw-alias-button-ghost-active-fill); }

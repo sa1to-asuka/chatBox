@@ -1,0 +1,66 @@
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, .85fr); gap: 22px; align-items: start; }
+.providers { min-width: 0; }
+.sectionHead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 4px 2px 18px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
+.sectionHead h3, .formHead h3 { margin: 0 0 5px; font-size: 18px; font-weight: 500; letter-spacing: -.02em; }
+.sectionHead p, .formHead p { margin: 0; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 1.6; }
+.sectionHead > span { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.card { padding: 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 9px; background: #fff; }
+.cardTop { display: flex; align-items: center; gap: 9px; }
+.mark { display: grid; place-items: center; flex-shrink: 0; width: 31px; height: 31px; border-radius: 8px; background: #edf3ec; color: #3b664b; font-size: 13px; font-weight: 650; }
+.mark[data-type="anthropic"] { background: #f6efe6; color: #8b6131; }
+.cardTop > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cardTop strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 550; }
+.cardTop div span { color: var(--dsw-alias-label-tertiary); font-size: 9px; }
+.connected { display: flex; align-items: center; gap: 4px; margin-left: auto; color: #658571; font-size: 9px; white-space: nowrap; }
+.connected i { width: 5px; height: 5px; border-radius: 50%; background: #5b9a6d; }
+.url { margin: 13px 0 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-tertiary); font-family: var(--ds-font-family-code); font-size: 9px; }
+.cardMeta { display: flex; gap: 13px; padding-top: 10px; border-top: 1px solid var(--dsw-alias-border-l1); color: var(--dsw-alias-label-tertiary); font-size: 9px; }
+.cardMeta span { display: inline-flex; align-items: center; gap: 3px; }
+.cardMeta svg { width: 11px; height: 11px; color: #6d9378; }
+.cardActions { display: flex; gap: 5px; margin-top: 13px; }
+.cardActions button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 29px; padding: 0 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 5px; background: #fff; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 10px; cursor: pointer; }
+.cardActions .fetch { flex: 1; color: var(--dsw-alias-brand-text); }
+.cardActions button:hover { background: var(--dsw-specific-sidebar-fill); }
+.cardActions .delete { color: #a95349; }
+.cardActions .delete:hover { background: #fbefec; }
+.form { position: sticky; top: 20px; padding: 20px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 9px; background: #f7f9f5; }
+.formHead { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 19px; }
+.formHead > span { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 7px; background: #e5eee5; color: #3e6b4c; }
+.form label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 13px; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.form input, .form select { box-sizing: border-box; width: 100%; padding: 9px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: #fff; color: var(--dsw-alias-label-primary); font: inherit; font-size: 12px; }
+.form input:focus, .form select:focus { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 0; }
+.formHint { margin: 0 0 16px; padding: 9px 10px; border-radius: 5px; background: #eef3ed; color: #738376; font-size: 10px; line-height: 1.7; }
+.primary { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 35px; border: 1px solid var(--dsw-alias-brand-primary); border-radius: 6px; background: var(--dsw-alias-brand-primary); color: #fff; font: inherit; font-size: 12px; cursor: pointer; }
+.primary:hover { background: #214a37; }
+.primary:disabled { opacity: .55; cursor: wait; }
+.empty { display: flex; flex-direction: column; align-items: center; gap: 7px; margin-top: 16px; padding: 56px 18px; border: 1px dashed var(--dsw-alias-border-l2); border-radius: 9px; color: var(--dsw-alias-label-tertiary); text-align: center; }
+.empty svg { width: 23px; height: 23px; color: #9caf9f; }
+.empty strong { color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 500; }
+.empty span { font-size: 10px; }
+.error, .notice { margin: 0; padding: 9px 12px; border-radius: 6px; font-size: 12px; }
+.error { color: #a8453b; background: #fff0eb; }
+.notice { color: #2e6444; background: #e8f3e8; }
+.importDialog { width: min(620px, calc(100vw - 32px)) !important; max-width: none !important; }
+.importTools { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.importTools button { border: 0; background: transparent; color: var(--dsw-alias-brand-text); font: inherit; cursor: pointer; }
+.discovered { display: flex; flex-direction: column; gap: 2px; max-height: 48vh; overflow-y: auto; }
+.discovered label { display: flex; align-items: center; gap: 10px; padding: 9px 7px; border-radius: 6px; cursor: pointer; }
+.discovered label:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.discovered input { accent-color: var(--dsw-alias-brand-primary); }
+.discovered span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.discovered strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
+.discovered small { color: var(--dsw-alias-label-tertiary); font-family: var(--ds-font-family-code); font-size: 9px; }
+.discovered svg { margin-left: auto; color: var(--dsw-alias-brand-text); }
+.cancel, .confirmDelete { height: 32px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: #fff; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px; cursor: pointer; }
+.confirmDelete { border-color: #b8574b; background: #b8574b; color: #fff; }
+@media (max-width: 1080px) {
+  .layout { grid-template-columns: 1fr; }
+  .form { position: static; }
+}
+@media (max-width: 620px) {
+  .grid { grid-template-columns: 1fr; }
+  .card { padding: 15px; }
+  .form { padding: 17px; }
+}

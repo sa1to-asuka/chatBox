@@ -7,13 +7,12 @@ import { canContinueReply } from '../../services/chat/reply.js'
 import { continueReply, regenerateReply } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
-import { openSettings } from '../settings/settingsDialogState.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
 import { Markdown } from '../markdown/Markdown.js'
 import { SiteThumbnails } from '../search/SiteLogo.js'
+import { navigate } from '../../services/navigation.js'
 import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
-import { ReadAloudButton } from './ReadAloudButton.js'
 import { CopyButton } from './CopyButton.js'
 import { ReplyArea } from './ReplyArea.js'
 import { useReplyView } from './useReplyView.js'
@@ -23,8 +22,6 @@ import {
   type SelectMessageVersion,
 } from './BranchSwitcher.js'
 import styles from './AssistantMessage.module.css'
-
-const TOP_UP_URL = 'https://platform.deepseek.com/top_up'
 
 export const AssistantMessage = memo(function AssistantMessage({
   sessionId,
@@ -56,8 +53,9 @@ export const AssistantMessage = memo(function AssistantMessage({
   const copyText = responseText || notice?.text
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
+  const summarySources = view.searchResults.length > 0 ? view.searchResults : view.sources
   return (
-    <div className={styles.message}>
+    <div className={styles.message} data-message-id={message.id}>
       {refused ? null : (
         <ReplyArea
           message={message}
@@ -96,44 +94,35 @@ export const AssistantMessage = memo(function AssistantMessage({
           <IconWarningOutline16 />
           <span>
             {notice.text}
-            {notice.action === 'apiKey' ? (
+            {notice.action === 'usage' ? (
               <>
                 {' '}
-                <button
-                  type="button"
-                  className={styles.noticeAction}
-                  onClick={() => openSettings('data')}
-                >
-                  {t('changeApiKey')}
+                <button type="button" className={styles.noticeAction} onClick={() => navigate('/usage')}>
+                  查看用量
                 </button>
               </>
             ) : null}
-            {notice.action === 'topUp' ? (
+            {notice.action === 'login' ? (
               <>
                 {' '}
-                <a
-                  className={styles.noticeAction}
-                  href={TOP_UP_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {t('topUp')}
-                </a>
+                <button type="button" className={styles.noticeAction} onClick={() => window.location.reload()}>
+                  重新登录
+                </button>
               </>
             ) : null}
           </span>
         </div>
       ) : null}
-      {!streaming && !refused && view.searchResults.length > 0 ? (
+      {!streaming && !refused && summarySources.length > 0 ? (
         <div
           className={clsx(styles.summary, panelEntry === summaryEntry && styles.summaryActive)}
-          onClick={() => toggleSearchPanel(summaryEntry, view.searchResults)}
+          onClick={() => toggleSearchPanel(summaryEntry, summarySources)}
         >
-          <SiteThumbnails sources={view.searchResults} />
+          <SiteThumbnails sources={summarySources} />
           <span>
             {t(
-              view.searchResults.length === 1 ? 'messageSearchSummary' : 'messageSearchSummaries',
-              { count: view.searchResults.length }
+              summarySources.length === 1 ? 'messageSearchSummary' : 'messageSearchSummaries',
+              { count: summarySources.length }
             )}
           </span>
         </div>
@@ -143,9 +132,6 @@ export const AssistantMessage = memo(function AssistantMessage({
           <BranchSwitcher versions={versions} disabled={busy} onSelect={onSelectVersion} />
           <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
             {copyText ? <CopyButton text={copyText} /> : null}
-            {responseText && !refused ? (
-              <ReadAloudButton messageId={message.id} text={responseText} />
-            ) : null}
             <IconButton
               icon={<IconRefreshOutline16 />}
               tooltip={t('regenerate')}

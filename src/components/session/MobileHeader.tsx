@@ -17,7 +17,9 @@ export const MobileHeader = ({ title }: { title?: string }) => {
         aria-label={t('expandSiderbarButton')}
         onClick={openMobileSider}
       />
-      {title === undefined ? null : (
+      {title === undefined ? (
+        <div className={styles.brand}><span className={styles.logo}>C</span>Chatbox</div>
+      ) : (
         <>
           <div className={styles.title}>{title}</div>
           <IconButton

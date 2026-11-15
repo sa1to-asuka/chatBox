@@ -7,7 +7,7 @@
   min-width: 90px;
   max-width: 100%;
   height: 36px;
-  padding: 0 42px 0 14px;
+  padding: 0 38px 0 14px;
   border: none;
   border-radius: 18px;
   background: var(--dsw-specific-selector);
@@ -34,11 +34,57 @@
     color: var(--dsw-alias-label-caption);
     cursor: default;
   }
+}
 
-  > span:first-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
+.ghost {
+  height: 34px;
+  padding: 0 29px 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 17px;
+  background: transparent;
+  font-size: 13px;
+
+  &:hover:not(:disabled) {
+    background: var(--dsw-alias-interactive-bg-hover);
   }
+
+  .arrow {
+    right: 9px;
+  }
+}
+
+.value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--dsw-alias-button-ghost-active-fill);
+  color: var(--dsw-alias-brand-text);
+  font-size: 9px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: .03em;
+}
+
+.hint {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .open {
@@ -52,7 +98,7 @@
 .arrow {
   position: absolute;
   top: 50%;
-  right: 14px;
+  right: 13px;
   display: flex;
   color: var(--dsw-alias-label-secondary);
   transform: translateY(-50%);
@@ -63,8 +109,8 @@
   position: fixed;
   z-index: 1050;
   box-sizing: border-box;
-  min-width: 124px;
-  max-width: 280px;
+  min-width: 190px;
+  max-width: min(340px, calc(100vw - 20px));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 4px;
@@ -84,8 +130,8 @@
   justify-content: space-between;
   gap: 8px;
   min-height: 40px;
-  padding: 4px 10px;
-  border-radius: 10px;
+  padding: 6px 10px;
+  border-radius: 9px;
   font-size: 14px;
   line-height: 22px;
   color: var(--dsw-alias-label-primary);
@@ -94,7 +140,39 @@
   user-select: none;
   transition: background-color var(--ds-transition-duration) var(--ds-ease-in-out);
 
-  &:hover {
+  &:hover,
+  &.active {
     background: var(--dsw-alias-interactive-bg-hover);
   }
+}
+
+.selected {
+  color: var(--dsw-alias-brand-text);
+}
+
+.optionDisabled {
+  color: var(--dsw-alias-label-caption);
+  cursor: default;
+  opacity: .65;
+}
+
+.optionMain {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.optionLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 14px 12px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  text-align: center;
 }

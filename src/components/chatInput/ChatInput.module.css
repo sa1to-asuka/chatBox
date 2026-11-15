@@ -330,3 +330,35 @@
     cursor: not-allowed;
   }
 }
+
+@media (max-width: 520px) {
+  .functionRow {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .toggles {
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .toggles::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toggle {
+    width: 34px;
+    padding: 0;
+  }
+
+  .toggleLabel,
+  .collapsedToggles .toggleLabel {
+    display: none;
+  }
+
+  .right {
+    gap: 2px;
+  }
+}

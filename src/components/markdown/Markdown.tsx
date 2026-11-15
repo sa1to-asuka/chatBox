@@ -18,6 +18,7 @@ export const Markdown = memo(function Markdown({
   className,
   disableLink,
   sources,
+  shareToken,
 }: {
   content: string
   loading: boolean
@@ -25,6 +26,7 @@ export const Markdown = memo(function Markdown({
   className?: string
   disableLink: boolean
   sources?: Source[]
+  shareToken?: string
 }) {
   const scrollToBottom = useScrollToBottom()
   const throttledMarkdown = useThrottleMarkdownRender(content, loading)
@@ -38,6 +40,7 @@ export const Markdown = memo(function Markdown({
       className={className}
       ast={ast}
       loading={loading}
+      shareToken={shareToken}
       onUpdate={scrollToBottom}
     />
   ) : null

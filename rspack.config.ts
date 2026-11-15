@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from '@rspack/cli'
 import { rspack, type Configuration } from '@rspack/core'
 
-const dev = process.env.NODE_ENV !== 'production'
+const dev = process.env.NODE_ENV
+  ? process.env.NODE_ENV !== 'production'
+  : process.argv.includes('serve')
 const targets = ['chrome >= 105', 'edge >= 105', 'safari >= 16', 'firefox >= 110']
 const root = path.dirname(fileURLToPath(import.meta.url))
 const { version } = JSON.parse(

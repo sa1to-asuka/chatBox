@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import type { Source } from '../../services/chat/view.js'
 import { formatDate } from '../../utils/format.js'
+import { safeExternalHttpUrl } from '../../utils/url.js'
 import { SiteLogo } from './SiteLogo.js'
 import styles from './SourceCard.module.css'
 
@@ -13,8 +14,8 @@ const formatPublishedAt = (value: string | null) => (value ? (formatDate(value, 
  */
 export const SourceCard = ({ source, className }: { source: Source; className?: string }) => {
   const date = formatPublishedAt(source.publishedAt)
-  return (
-    <a className={styles.anchor} href={source.url} target="_blank" rel="noreferrer">
+  const href = safeExternalHttpUrl(source.url)
+  const content = (
       <div className={clsx(styles.card, className)}>
         <div className={styles.meta}>
           <SiteLogo url={source.siteIcon} className={styles.siteIcon} />
@@ -25,6 +26,6 @@ export const SourceCard = ({ source, className }: { source: Source; className?: 
         <div className={styles.title}>{source.title}</div>
         {source.snippet ? <div className={styles.snippet}>{source.snippet}</div> : null}
       </div>
-    </a>
   )
+  return href ? <a className={styles.anchor} href={href} target="_blank" rel="noopener noreferrer">{content}</a> : <div>{content}</div>
 }

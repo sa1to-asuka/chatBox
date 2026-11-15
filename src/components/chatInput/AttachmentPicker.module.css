@@ -1,0 +1,12 @@
+.hidden { display: none; }
+.overlay { position: fixed; inset: 0; z-index: 1300; display: flex; align-items: flex-end; background: rgba(12, 24, 17, .32); backdrop-filter: blur(2px); }
+.sheet { width: 100%; box-sizing: border-box; padding: 8px 14px max(14px, env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--dsw-specific-menu); box-shadow: 0 -10px 30px rgba(0, 0, 0, .12); }
+.handle { width: 34px; height: 4px; margin: 0 auto 14px; border-radius: 4px; background: var(--dsw-alias-border-l2); }
+.title { margin: 0 4px 8px; color: var(--dsw-alias-label-tertiary); font-size: 11px; letter-spacing: .06em; }
+.sheet > button { display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; padding: 13px 8px; border: 0; border-radius: 10px; background: transparent; color: var(--dsw-alias-label-primary); text-align: left; font: inherit; cursor: pointer; }
+.sheet > button:active, .sheet > button:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.sheet > button > span:last-child { display: flex; flex-direction: column; gap: 3px; }
+.sheet strong { font-size: 14px; font-weight: 500; }
+.sheet small { color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--dsw-alias-button-ghost-active-fill); color: var(--dsw-alias-brand-text); }
+.sheet .cancel { justify-content: center; margin-top: 6px; border-top: 1px solid var(--dsw-alias-border-l1); border-radius: 0; color: var(--dsw-alias-label-tertiary); font-size: 13px; }

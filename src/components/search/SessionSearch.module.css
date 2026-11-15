@@ -1,0 +1,16 @@
+.dialog { width: min(680px, calc(100vw - 32px)) !important; max-width: none !important; }
+.main { padding-top: 0 !important; }
+.searchBox { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 4px 2px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-3); color: var(--dsw-alias-label-tertiary); }
+.searchBox input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 15px; padding: 10px 0; }
+.searchBox input::placeholder { color: var(--dsw-alias-label-caption); }
+.searchBox kbd { padding: 3px 6px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 5px; color: var(--dsw-alias-label-caption); font-family: var(--ds-font-family-code); font-size: 10px; white-space: nowrap; }
+.results { display: flex; flex-direction: column; gap: 2px; max-height: min(58vh, 520px); overflow-y: auto; padding: 8px 0 2px; }
+.results > button { display: flex; flex-direction: column; gap: 6px; width: 100%; box-sizing: border-box; padding: 11px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; text-align: left; cursor: pointer; }
+.results > button:hover, .results > button.active { background: var(--dsw-alias-interactive-bg-hover); }
+.resultTop { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.resultTop strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 550; }
+.resultTop small { flex-shrink: 0; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+.snippet { overflow: hidden; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 1.55; text-overflow: ellipsis; white-space: nowrap; }
+.state, .error { padding: 30px 12px; margin: 0; text-align: center; color: var(--dsw-alias-label-tertiary); font-size: 13px; }
+.error { color: var(--dsw-alias-state-error-primary); }
+@media (max-width: 767px) { .dialog { width: 100vw !important; height: 88dvh; margin-top: auto; border-radius: 18px 18px 0 0; } .searchBox kbd { display: none; } }

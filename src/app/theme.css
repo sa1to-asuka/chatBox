@@ -125,16 +125,16 @@ body {
   --dsw-alias-border-l2-darkmode-thin: rgba(0, 0, 0, 0.1);
   --dsw-alias-border-l2: rgba(0, 0, 0, 0.1);
   --dsw-alias-border-l3: rgba(0, 0, 0, 0.12);
-  --dsw-alias-brand-primary-invert: var(--dsw-static-blue-500);
-  --dsw-alias-brand-primary: var(--dsw-static-blue-500);
-  --dsw-alias-brand-text: var(--dsw-static-blue-500);
+  --dsw-alias-brand-primary-invert: #2b5d45;
+  --dsw-alias-brand-primary: #2b5d45;
+  --dsw-alias-brand-text: #2b5d45;
   --dsw-alias-button-contrast-fill: var(--dsw-static-neutral-bluish-700);
   --dsw-alias-button-elevated-fill: var(--dsw-static-neutral-bluish-00);
-  --dsw-alias-button-ghost-active-border: var(--dsw-static-blue-300);
-  --dsw-alias-button-ghost-active-fill: var(--dsw-static-blue-50);
-  --dsw-alias-button-ghost-active-hover: var(--dsw-static-blue-100);
+  --dsw-alias-button-ghost-active-border: #b9d1c1;
+  --dsw-alias-button-ghost-active-fill: #edf4ef;
+  --dsw-alias-button-ghost-active-hover: #e3eee6;
   --dsw-alias-button-primary-fill: var(--dsw-alias-brand-primary);
-  --dsw-alias-button-primary-hover: var(--dsw-static-blue-450);
+  --dsw-alias-button-primary-hover: #214a37;
   --dsw-alias-interactive-bg-active: rgba(38, 49, 72, 0.1);
   --dsw-alias-interactive-bg-hover-danger: rgba(236, 19, 19, 0.05);
   --dsw-alias-interactive-bg-hover: rgba(38, 49, 72, 0.06);
@@ -155,14 +155,14 @@ body {
   --dsw-alias-state-error-primary: var(--dsw-static-red-600);
   --dsw-alias-state-error-secondary: var(--dsw-static-red-400);
   --dsw-alias-toast-bg: var(--dsw-static-neutral-bluish-800);
-  --dsw-specific-bubble: var(--dsw-static-blue-50);
+  --dsw-specific-bubble: #edf4ef;
   --dsw-specific-input-major: var(--dsw-static-neutral-bluish-00);
   --dsw-specific-login-input: var(--dsw-static-neutral-bluish-50);
   --dsw-specific-menu: var(--dsw-alias-bg-layer-3);
   --dsw-alias-tooltip-bg: var(--dsw-static-neutral-bluish-850);
-  --dsw-specific-selector: var(--dsw-static-neutral-bluish-75);
-  --dsw-specific-sidebar-fill: var(--dsw-static-neutral-bluish-50);
-  --dsw-specific-sidebar-nav-item-active-accent: var(--dsw-static-blue-100);
+  --dsw-specific-selector: #edf1ec;
+  --dsw-specific-sidebar-fill: #f5f7f3;
+  --dsw-specific-sidebar-nav-item-active-accent: #e2ece4;
   --dsw-specific-sidebar-nav-item-hover: var(--dsw-static-neutral-bluish-75);
 }
 
@@ -176,16 +176,16 @@ body[data-ds-dark-theme] {
   --dsw-alias-border-l2-darkmode-thin: rgba(255, 255, 255, 0.06);
   --dsw-alias-border-l2: rgba(255, 255, 255, 0.12);
   --dsw-alias-border-l3: rgba(255, 255, 255, 0.16);
-  --dsw-alias-brand-primary-invert: var(--dsw-static-neutral-bluish-00);
-  --dsw-alias-brand-primary: var(--dsw-static-blue-450);
-  --dsw-alias-brand-text: var(--dsw-static-blue-400);
+  --dsw-alias-brand-primary-invert: #f2f8f4;
+  --dsw-alias-brand-primary: #8fc3a3;
+  --dsw-alias-brand-text: #a5d3b5;
   --dsw-alias-button-contrast-fill: var(--dsw-static-neutral-bluish-50);
   --dsw-alias-button-elevated-fill: var(--dsw-static-neutral-bluish-750);
-  --dsw-alias-button-ghost-active-border: var(--dsw-static-blue-600);
-  --dsw-alias-button-ghost-active-fill: var(--dsw-static-blue-900);
-  --dsw-alias-button-ghost-active-hover: var(--dsw-static-blue-800);
+  --dsw-alias-button-ghost-active-border: #47745b;
+  --dsw-alias-button-ghost-active-fill: #1b2d23;
+  --dsw-alias-button-ghost-active-hover: #263e30;
   --dsw-alias-button-primary-fill: var(--dsw-alias-brand-primary);
-  --dsw-alias-button-primary-hover: var(--dsw-static-blue-500);
+  --dsw-alias-button-primary-hover: #9ccdaf;
   --dsw-alias-interactive-bg-active: rgba(255, 255, 255, 0.14);
   --dsw-alias-interactive-bg-hover-danger: rgba(242, 90, 90, 0.15);
   --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, 0.08);
@@ -206,14 +206,14 @@ body[data-ds-dark-theme] {
   --dsw-alias-state-error-primary: var(--dsw-static-red-400);
   --dsw-alias-state-error-secondary: var(--dsw-static-red-400);
   --dsw-alias-toast-bg: var(--dsw-static-neutral-bluish-750);
-  --dsw-specific-bubble: var(--dsw-static-neutral-bluish-850);
+  --dsw-specific-bubble: #202720;
   --dsw-specific-input-major: var(--dsw-static-neutral-bluish-850);
   --dsw-specific-login-input: var(--dsw-static-neutral-bluish-900);
   --dsw-specific-menu: var(--dsw-alias-bg-layer-3);
   --dsw-alias-tooltip-bg: var(--dsw-static-neutral-bluish-750);
-  --dsw-specific-selector: var(--dsw-static-neutral-bluish-750);
-  --dsw-specific-sidebar-fill: var(--dsw-static-neutral-bluish-900);
-  --dsw-specific-sidebar-nav-item-active-accent: var(--dsw-static-neutral-bluish-800);
+  --dsw-specific-selector: #273229;
+  --dsw-specific-sidebar-fill: #141a16;
+  --dsw-specific-sidebar-nav-item-active-accent: #23352a;
   --dsw-specific-sidebar-nav-item-hover: var(--dsw-static-neutral-bluish-850);
 }
 

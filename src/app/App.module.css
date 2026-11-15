@@ -1,3 +1,12 @@
+.boot {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  color: var(--dsw-alias-label-tertiary);
+  background: var(--dsw-alias-bg-base);
+  font-size: 13px;
+}
+
 .frame {
   position: absolute;
   inset: 0;
@@ -59,4 +68,14 @@
     bottom: auto;
     height: var(--app-viewport-height, 100dvh);
   }
+}
+
+:global(.chat-search-hit) {
+  animation: chat-search-pulse 2.2s ease-out;
+  border-radius: 10px;
+}
+
+@keyframes chat-search-pulse {
+  0%, 100% { background-color: transparent; }
+  18%, 62% { background-color: var(--dsw-alias-button-ghost-active-fill); box-shadow: 0 0 0 6px var(--dsw-alias-button-ghost-active-fill); }
 }

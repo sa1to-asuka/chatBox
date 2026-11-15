@@ -1,15 +1,22 @@
 import clsx from 'clsx'
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAnchoredPosition, useDismiss } from './anchored.js'
 import { IconCheckOutline16, IconChevronDownOutline14 } from './icons.js'
 import styles from './Select.module.css'
 
-export type SelectOption<T extends string> = { value: T; label: string; lang?: string }
+export type SelectOption<T extends string> = {
+  value: T
+  label: string
+  lang?: string
+  hint?: string
+  badge?: string
+  disabled?: boolean
+}
 
 /**
- * 胶囊形选择器：触发器高 36px、圆角 18px、浅灰底，下拉菜单选中项右侧打勾；
- * 点外部或 Esc 关闭。value 不匹配任何选项时触发器显示 placeholder。
+ * 胶囊形选择器：支持普通 pill 和紧凑 ghost 两种触发器。
+ * 菜单选中项右侧打勾；支持方向键、Home/End、Enter、Esc，点外部关闭。
  */
 export const Select = <T extends string>({
   value,
@@ -19,6 +26,9 @@ export const Select = <T extends string>({
   ariaLabel,
   className,
   disabled = false,
+  variant = 'pill',
+  loading = false,
+  emptyText,
 }: {
   value: T
   options: SelectOption<T>[]
@@ -27,8 +37,14 @@ export const Select = <T extends string>({
   ariaLabel?: string
   className?: string
   disabled?: boolean
+  variant?: 'pill' | 'ghost'
+  loading?: boolean
+  emptyText?: string
 }) => {
   const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const listboxId = useId()
+  const optionRefs = useRef<(HTMLDivElement | null)[]>([])
   const current = options.find((option) => option.value === value)
   // 菜单贴右侧展开，最多 320px 高，超出在菜单内滚动
   const { anchorRef, floatingRef, position } = useAnchoredPosition<
@@ -38,22 +54,70 @@ export const Select = <T extends string>({
   // Esc 只关菜单，不让外层弹窗一起关闭
   useDismiss(open, [anchorRef, floatingRef], () => setOpen(false), { captureEscape: true })
 
+  const enabledIndexes = options.flatMap((option, index) => option.disabled ? [] : [index])
+  const selectedIndex = options.findIndex((option) => option.value === value && !option.disabled)
+  const openMenu = () => {
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : enabledIndexes[0] ?? -1)
+    setOpen(true)
+  }
+  const choose = (option: SelectOption<T>) => {
+    if (option.disabled) {return}
+    setOpen(false)
+    onChange(option.value)
+  }
+  const move = (direction: 1 | -1) => {
+    if (enabledIndexes.length === 0) {return}
+    const currentIndex = enabledIndexes.indexOf(activeIndex)
+    const next = currentIndex < 0
+      ? enabledIndexes[direction === 1 ? 0 : enabledIndexes.length - 1]
+      : enabledIndexes[(currentIndex + direction + enabledIndexes.length) % enabledIndexes.length]
+    setActiveIndex(next)
+  }
+  useEffect(() => {
+    if (open && activeIndex >= 0) {optionRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' })}
+  }, [open, activeIndex])
+
   return (
     <>
       <button
         ref={anchorRef}
         type="button"
-        className={clsx(styles.trigger, open && styles.open, className)}
+        className={clsx(styles.trigger, variant === 'ghost' && styles.ghost, open && styles.open, className)}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
-        disabled={disabled}
-        onClick={() => setOpen((value) => !value)}
+        aria-controls={open ? listboxId : undefined}
+        aria-activedescendant={open && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined}
+        disabled={disabled || loading}
+        onClick={() => open ? setOpen(false) : openMenu()}
+        onKeyDown={(event) => {
+          if (!open && ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
+            event.preventDefault()
+            openMenu()
+            return
+          }
+          if (!open) {return}
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault()
+            move(event.key === 'ArrowDown' ? 1 : -1)
+          } else if (event.key === 'Home' || event.key === 'End') {
+            event.preventDefault()
+            setActiveIndex(event.key === 'Home' ? enabledIndexes[0] ?? -1 : enabledIndexes.at(-1) ?? -1)
+          } else if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            const option = options[activeIndex]
+            if (option) {choose(option)}
+          }
+        }}
       >
         {current ? (
-          <span lang={current.lang}>{current.label}</span>
+          <span className={styles.value}>
+            <span className={styles.label} lang={current.lang}>{current.label}</span>
+            {current.badge ? <span className={styles.badge}>{current.badge}</span> : null}
+            {current.hint ? <span className={styles.hint}>{current.hint}</span> : null}
+          </span>
         ) : (
-          <span className={styles.placeholder}>{placeholder}</span>
+          <span className={styles.placeholder}>{loading ? '载入中…' : placeholder}</span>
         )}
         <span className={styles.arrow}>
           <IconChevronDownOutline14 />
@@ -63,24 +127,32 @@ export const Select = <T extends string>({
         ? createPortal(
             <div
               ref={floatingRef}
+              id={listboxId}
               className={styles.menu}
               style={position ?? undefined}
               role="listbox"
               aria-label={ariaLabel}
             >
-              {options.map((option) => (
+              {loading ? <div className={styles.empty}>正在加载…</div> : null}
+              {!loading && options.length === 0 ? <div className={styles.empty}>{emptyText ?? '暂无选项'}</div> : null}
+              {options.map((option, index) => (
                 <div
                   key={option.value}
+                  ref={(element) => { optionRefs.current[index] = element }}
+                  id={`${listboxId}-${index}`}
                   role="option"
                   lang={option.lang}
                   aria-selected={option.value === value}
-                  className={styles.option}
-                  onClick={() => {
-                    setOpen(false)
-                    onChange(option.value)
-                  }}
+                  aria-disabled={option.disabled}
+                  className={clsx(styles.option, option.value === value && styles.selected, option.disabled && styles.optionDisabled, index === activeIndex && styles.active)}
+                  onMouseEnter={() => !option.disabled && setActiveIndex(index)}
+                  onClick={() => choose(option)}
                 >
-                  <span>{option.label}</span>
+                  <span className={styles.optionMain}>
+                    <span className={styles.optionLabel}>{option.label}</span>
+                    {option.badge ? <span className={styles.badge}>{option.badge}</span> : null}
+                    {option.hint ? <span className={styles.hint}>{option.hint}</span> : null}
+                  </span>
                   {option.value === value ? <IconCheckOutline16 /> : null}
                 </div>
               ))}

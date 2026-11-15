@@ -9,3 +9,12 @@ build/
 .env.*
 !.env.example
 tmp/
+data/
+backups/
+.claude/launch.json
+.playwright-cli/
+.tmp-*/
+*.db
+*.db-wal
+*.db-shm
+/*.png

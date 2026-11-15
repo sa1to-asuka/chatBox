@@ -108,7 +108,7 @@ export const prepareDraftMessage = (draft: Draft, tasks: Record<string, UploadTa
       return null
     }
     files.push({
-      id: attachment.id,
+      id: task.serverId,
       serverId: task.serverId,
       name: attachment.file.name,
       size: attachment.file.size,

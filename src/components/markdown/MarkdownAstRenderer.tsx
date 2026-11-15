@@ -9,6 +9,7 @@ import type {
   Table as TableNode,
 } from 'mdast'
 import { CitationLink } from '../search/CitationLink.js'
+import { IconCheckSquare16, IconSquareOutline14 } from '../base/icons.js'
 import { CodeBlock } from './CodeBlock.js'
 import { ImageAsLink, Link } from './Link.js'
 import { InlineMath, MathBlock } from './MathFormula.js'
@@ -20,7 +21,7 @@ const Html = memo(function Html({ value }: { value: string }) {
   return <span className="ds-markdown-html">{value}</span>
 })
 
-const List = memo(function List({ node, loading }: { node: ListNode; loading: boolean }) {
+const List = memo(function List({ node, loading, shareToken }: { node: ListNode; loading: boolean; shareToken?: string }) {
   const ListTag = node.ordered ? 'ol' : 'ul'
   return (
     <ListTag start={node.ordered ? node.start || undefined : undefined}>
@@ -31,10 +32,9 @@ const List = memo(function List({ node, loading }: { node: ListNode; loading: bo
         return (
           <li key={index} className={isTaskItem ? 'ds-markdown-task-list-item' : undefined}>
             {isTaskItem ? (
-              // □ U+25A1 / ☑ U+2611
-              <span className="ds-markdown-task-checkbox">{checked ? '☑  ' : '□  '}</span>
+              <span className="ds-markdown-task-checkbox" aria-hidden>{checked ? <IconCheckSquare16 /> : <IconSquareOutline14 />}</span>
             ) : null}
-            <MarkdownBlockContentOrDefinitionContent nodes={child.children} loading={loading} />
+            <MarkdownBlockContentOrDefinitionContent nodes={child.children} loading={loading} shareToken={shareToken} />
           </li>
         )
       })}
@@ -159,9 +159,11 @@ const MarkdownBlockContentOrDefinitionContent = memo(
   function MarkdownBlockContentOrDefinitionContent({
     nodes,
     loading,
+    shareToken,
   }: {
     nodes: Array<BlockContent | DefinitionContent>
     loading: boolean
+    shareToken?: string
   }) {
     return nodes.map((node, index) => {
       switch (node.type) {
@@ -172,7 +174,7 @@ const MarkdownBlockContentOrDefinitionContent = memo(
         case 'blockquote':
           return (
             <blockquote key={index}>
-              <MarkdownBlockContentOrDefinitionContent nodes={node.children} loading={loading} />
+              <MarkdownBlockContentOrDefinitionContent nodes={node.children} loading={loading} shareToken={shareToken} />
             </blockquote>
           )
         case 'html':
@@ -198,12 +200,13 @@ const MarkdownBlockContentOrDefinitionContent = memo(
               code={node.value}
               infostring={node.lang || 'text'}
               loading={loading}
+              shareToken={shareToken}
             />
           )
         case 'table':
           return <Table node={node} key={index} />
         case 'list':
-          return <List key={index} node={node} loading={loading} />
+          return <List key={index} node={node} loading={loading} shareToken={shareToken} />
         default:
           // 脚注与定义已在解析时换成段落
           return null
@@ -217,10 +220,12 @@ export const MarkdownAstRenderer = memo(function MarkdownAstRenderer({
   onUpdate,
   className,
   loading = false,
+  shareToken,
 }: {
   ast: Root
   className?: string
   loading?: boolean
+  shareToken?: string
   /**
    * layoutEffect 之后触发 -> 进行页面滚动
    */
@@ -239,9 +244,10 @@ export const MarkdownAstRenderer = memo(function MarkdownAstRenderer({
         <MarkdownBlockContentOrDefinitionContent
           nodes={ast.children as Array<BlockContent | DefinitionContent>}
           loading={loading}
+          shareToken={shareToken}
         />
       </div>
     ),
-    [className, ast.children, loading]
+    [className, ast.children, loading, shareToken]
   )
 })

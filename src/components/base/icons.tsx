@@ -523,3 +523,57 @@ export const IconToastError16 = () => (
     />
   </svg>
 )
+
+export const IconArrowLeftOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M7.1 3.1L2.2 8L7.1 12.9L7.98 12.02L4.6 8.65H14V7.35H4.6L7.98 3.98L7.1 3.1Z" fill="currentColor" />
+  </svg>
+)
+
+export const IconPlusOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M7.35 2.5H8.65V7.35H13.5V8.65H8.65V13.5H7.35V8.65H2.5V7.35H7.35V2.5Z" fill="currentColor" />
+  </svg>
+)
+
+export const IconPinOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9.25 1.5L14.5 6.75L13.3 7.95L12.55 7.2L9.55 10.2L9.3 13.25L8.15 14.4L5.55 11.8L2.15 15.2L0.8 13.85L4.2 10.45L1.6 7.85L2.75 6.7L5.8 6.45L8.8 3.45L8.05 2.7L9.25 1.5ZM6.9 8.25L5.4 9.75L8.25 12.6L8.35 11.25L12.15 7.45L6.9 8.25Z" fill="currentColor" />
+  </svg>
+)
+
+export const IconFolderOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M1.5 3.2C1.5 2.54 2.04 2 2.7 2H6.1L7.6 3.5H13.3C13.96 3.5 14.5 4.04 14.5 4.7V12.3C14.5 12.96 13.96 13.5 13.3 13.5H2.7C2.04 13.5 1.5 12.96 1.5 12.3V3.2ZM2.8 4.7V12.2H13.2V4.8H7.06L5.56 3.3H2.8V4.7Z" fill="currentColor" />
+  </svg>
+)
+
+export const IconExpandOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6.2 1.5H14.5V9.8H13.2V3.72L3.72 13.2H9.8V14.5H1.5V6.2H2.8V12.28L12.28 2.8H6.2V1.5Z" fill="currentColor" />
+  </svg>
+)
+
+export const IconSquareOutline14 = () => (
+  <svg width={14} height={14} viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M1.5 1.5H12.5V12.5H1.5V1.5ZM2.7 2.7V11.3H11.3V2.7H2.7Z" fill="currentColor" />
+  </svg>
+)
+
+export const IconCheckSquare16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 2H14V14H2V2ZM3.2 3.2V12.8H12.8V3.2H3.2ZM11.16 5.42L11.72 6.23L6.65 9.86L4.3 7.52L5.15 6.66L6.52 8L11.16 5.42Z" fill="currentColor" />
+  </svg>
+)
+
+export const IconPhotoOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M1.5 2.5C1.5 1.95 1.95 1.5 2.5 1.5H13.5C14.05 1.5 14.5 1.95 14.5 2.5V13.5C14.5 14.05 14.05 14.5 13.5 14.5H2.5C1.95 14.5 1.5 14.05 1.5 13.5V2.5ZM2.8 2.8V10.1L5.2 7.7L7.45 9.95L10.8 5.1L13.2 8.45V2.8H2.8ZM13.2 10.55L10.65 6.9L7.45 11.55L5.15 9.25L2.8 11.6V13.2H13.2V10.55ZM10.5 4.25C10.5 3.56 11.06 3 11.75 3C12.44 3 13 3.56 13 4.25C13 4.94 12.44 5.5 11.75 5.5C11.06 5.5 10.5 4.94 10.5 4.25Z" fill="currentColor" />
+  </svg>
+)
+
+export const IconLogoutOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6.2 2.2H3.4C2.63 2.2 2 2.83 2 3.6V12.4C2 13.17 2.63 13.8 3.4 13.8H6.2V12.5H3.4C3.35 12.5 3.3 12.45 3.3 12.4V3.6C3.3 3.55 3.35 3.5 3.4 3.5H6.2V2.2ZM10.575 4.125L9.65 5.05L11.55 6.95H6.1V8.25H11.55L9.65 10.15L10.575 11.075L14 7.65L10.575 4.125Z" fill="currentColor" />
+  </svg>
+)

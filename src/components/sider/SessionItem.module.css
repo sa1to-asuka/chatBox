@@ -84,3 +84,11 @@
     font-size: 16px;
   }
 }
+
+.pinMark { display: flex; flex-shrink: 0; margin-right: 4px; color: var(--dsw-alias-label-tertiary); }
+.pinMark svg { width: 12px; height: 12px; }
+.moveList { display: flex; flex-direction: column; gap: 3px; min-width: min(360px, 70vw); }
+.moveList button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 10px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.moveList button:hover, .moveList button.moveActive { background: var(--dsw-alias-interactive-bg-hover); }
+.moveList small { margin-left: auto; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+.moveEmpty { color: var(--dsw-alias-label-tertiary); font-size: 12px; padding: 8px; margin: 0; }
