@@ -6,6 +6,7 @@ import { loadFolders, resetFolders } from '../services/chat/folders.js'
 import { navigate, usePathname } from '../services/navigation.js'
 import { AdminPage } from '../components/admin/AdminPage.js'
 import { UsagePage } from '../components/usage/UsagePage.js'
+import { FilesPage } from '../components/files/FilesPage.js'
 import { SharePage } from '../components/share/SharePage.js'
 import { useTranslate } from '../i18n/index.js'
 import { useSettings } from '../services/settings.js'
@@ -26,6 +27,8 @@ import { SessionView } from '../components/session/SessionView.js'
 import { MobileHeader } from '../components/session/MobileHeader.js'
 import { Welcome } from '../components/session/Welcome.js'
 import { SettingsDialog } from '../components/settings/SettingsDialog.js'
+import { PluginMarketDialog } from '../components/plugins/PluginMarketDialog.js'
+import { usePlugins } from '../services/plugins/store.js'
 import { Toast } from '../components/base/Toast.js'
 import { showToast } from '../components/base/toastState.js'
 import { onUploadNotice } from '../services/attachments.js'
@@ -63,22 +66,23 @@ export const App = () => {
   const pathname = usePathname()
   const adminRoute = pathname === '/admin'
   const usageRoute = pathname === '/usage'
+  const filesRoute = pathname === '/files'
   const shareMatch = /^\/s\/([A-Za-z0-9_-]{30,100})$/.exec(pathname)
   const shareRoute = Boolean(shareMatch)
 
-  usePreventPageScroll(isMobile && !adminRoute && !usageRoute && !shareRoute)
+  usePreventPageScroll(isMobile && !adminRoute && !usageRoute && !filesRoute && !shareRoute)
   useEffect(() => { void refreshUser() }, [])
   useEffect(() => {
-    document.title = shareRoute ? '分享的对话 · Chatbox' : adminRoute ? '管理后台 · Chatbox' : usageRoute ? '积分与用量 · Chatbox' : 'Chatbox'
+    document.title = shareRoute ? '分享的对话 · Chatbox' : adminRoute ? '管理后台 · Chatbox' : usageRoute ? '积分与用量 · Chatbox' : filesRoute ? '文件管理 · Chatbox' : 'Chatbox'
     if (adminRoute && auth.status === 'authenticated' && auth.user?.role !== 'admin') {navigate('/', true)}
-  }, [shareRoute, adminRoute, usageRoute, auth.status, auth.user?.role])
+  }, [shareRoute, adminRoute, usageRoute, filesRoute, auth.status, auth.user?.role])
 
   useEffect(() => {
     document.documentElement.lang = locale
   }, [locale])
 
   useEffect(() => {
-    if (auth.status !== 'authenticated' || shareRoute || adminRoute || usageRoute) {return}
+    if (auth.status !== 'authenticated' || shareRoute || adminRoute || usageRoute || filesRoute) {return}
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
@@ -87,7 +91,7 @@ export const App = () => {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [auth.status, shareRoute, adminRoute, usageRoute])
+  }, [auth.status, shareRoute, adminRoute, usageRoute, filesRoute])
 
   // 文件数、存储空间达到上限时，附件上只显示「上传失败」，原因用 toast 说明
   useEffect(() => onUploadNotice(showToast), [])
@@ -106,10 +110,12 @@ export const App = () => {
       void initChat()
       void loadModels()
       void loadFolders()
+      void usePlugins.getState().load()
     } else if (auth.status === 'anonymous') {
       resetChat()
       resetModels()
       resetFolders()
+      usePlugins.getState().reset()
       closeGlobalSearch()
     }
   }, [auth.status, shareRoute])
@@ -121,6 +127,7 @@ export const App = () => {
       : <div className={styles.boot}>此页面仅管理员可访问，正在返回聊天…</div>
   }
   if (usageRoute) {return <UsagePage />}
+  if (filesRoute) {return <FilesPage />}
 
   return (
     <>
@@ -183,6 +190,7 @@ export const App = () => {
       </div>
       <SessionSearch />
       <SettingsDialog />
+      <PluginMarketDialog />
       <Toast />
     </>
   )

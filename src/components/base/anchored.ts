@@ -47,19 +47,36 @@ export type AnchoredOptions = {
    * 旧位置绘制一帧再回弹，所以需要这个同步入口。
    */
   measureKey?: unknown
+  /**
+   * 用 visualViewport 而不是布局视口计算边界。移动端键盘弹出时布局视口不变，
+   * 只有 visualViewport 会收缩；命令菜单等贴在输入框上方的浮层需要这一项。
+   */
+  visualViewport?: boolean
 }
 
-const clampLeft = (left: number, width: number) =>
-  Math.max(VIEWPORT_PADDING, Math.min(left, window.innerWidth - width - VIEWPORT_PADDING))
+type ViewportBounds = { top: number; left: number; width: number; height: number }
 
-const alignLeft = (anchor: DOMRect, width: number, align: Align, alignOffset: number) => {
+const viewportBounds = (visual: boolean): ViewportBounds => {
+  const viewport = visual ? window.visualViewport : null
+  return {
+    top: viewport?.offsetTop ?? 0,
+    left: viewport?.offsetLeft ?? 0,
+    width: viewport?.width ?? window.innerWidth,
+    height: viewport?.height ?? window.innerHeight,
+  }
+}
+
+const clampLeft = (left: number, width: number, view: ViewportBounds) =>
+  Math.max(view.left + VIEWPORT_PADDING, Math.min(left, view.left + view.width - width - VIEWPORT_PADDING))
+
+const alignLeft = (anchor: DOMRect, width: number, align: Align, alignOffset: number, view: ViewportBounds) => {
   if (align === 'center') {
-    return clampLeft(anchor.left + anchor.width / 2 - width / 2 + alignOffset, width)
+    return clampLeft(anchor.left + anchor.width / 2 - width / 2 + alignOffset, width, view)
   }
   if (align === 'end') {
-    return clampLeft(anchor.right - width + alignOffset, width)
+    return clampLeft(anchor.right - width + alignOffset, width, view)
   }
-  return clampLeft(anchor.left + alignOffset, width)
+  return clampLeft(anchor.left + alignOffset, width, view)
 }
 
 /** 只有一侧放得下时用那一侧；两侧都放得下用优先侧；都放不下时退到空间更大的一侧 */
@@ -93,9 +110,12 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
     minSpace = 160,
     measureFirstChild = false,
     measureKey,
-  }: AnchoredOptions = {}
+    visualViewport = false,
+  }: AnchoredOptions = {},
+  externalAnchorRef?: RefObject<T | null>
 ) => {
-  const anchorRef = useRef<T | null>(null) as MutableRefObject<T | null>
+  const internalAnchorRef = useRef<T | null>(null) as MutableRefObject<T | null>
+  const anchorRef = (externalAnchorRef ?? internalAnchorRef) as MutableRefObject<T | null>
   const floatingRef = useRef<F | null>(null) as MutableRefObject<F | null>
   const [position, setPosition] = useState<AnchoredPosition | null>(null)
 
@@ -129,15 +149,16 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
       return
     }
     const rect = anchor.getBoundingClientRect()
-    const spaceAbove = rect.top - offset - VIEWPORT_PADDING
-    const spaceBelow = window.innerHeight - rect.bottom - offset - VIEWPORT_PADDING
+    const view = viewportBounds(visualViewport)
+    const spaceAbove = rect.top - view.top - offset - VIEWPORT_PADDING
+    const spaceBelow = view.top + view.height - rect.bottom - offset - VIEWPORT_PADDING
 
     if (maxHeight === undefined) {
       const { width, height } = floating.getBoundingClientRect()
       const resolved = resolveSide(spaceAbove, spaceBelow, side, height)
       applyPosition({
         top: resolved === 'top' ? rect.top - offset - height : rect.bottom + offset,
-        left: alignLeft(rect, width, align, alignOffset),
+        left: alignLeft(rect, width, align, alignOffset, view),
       })
       return
     }
@@ -150,12 +171,12 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
     applyPosition({
       top:
         resolved === 'top'
-          ? Math.max(VIEWPORT_PADDING, rect.top - offset - height)
+          ? Math.max(view.top + VIEWPORT_PADDING, rect.top - offset - height)
           : rect.bottom + offset,
-      left: alignLeft(rect, width, align, alignOffset),
+      left: alignLeft(rect, width, align, alignOffset, view),
       maxHeight: height,
     })
-  }, [align, alignOffset, applyPosition, floatingRef, getAnchor, maxHeight, minSpace, offset, side])
+  }, [align, alignOffset, applyPosition, floatingRef, getAnchor, maxHeight, minSpace, offset, side, visualViewport])
 
   // 打开时与内容变化时同步测量，必须在绘制前完成
   useLayoutEffect(() => {
@@ -184,12 +205,17 @@ export const useAnchoredPosition = <T extends HTMLElement, F extends HTMLElement
     }
     window.addEventListener('scroll', update, { capture: true, passive: true })
     window.addEventListener('resize', update, { passive: true })
+    const viewport = visualViewport ? window.visualViewport : null
+    viewport?.addEventListener('resize', update)
+    viewport?.addEventListener('scroll', update)
     return () => {
       observer.disconnect()
       window.removeEventListener('scroll', update, { capture: true })
       window.removeEventListener('resize', update)
+      viewport?.removeEventListener('resize', update)
+      viewport?.removeEventListener('scroll', update)
     }
-  }, [floatingRef, getAnchor, open, update])
+  }, [floatingRef, getAnchor, open, update, visualViewport])
 
   useEffect(() => {
     if (!open) {

@@ -121,6 +121,19 @@ export type ServerToolBlock =
 /** 用于识别客户端工具调用的内容块类型 */
 export type ToolUseBlock = { type: 'tool_use'; id: string; name: string; input: unknown }
 
+export type FileTaskBlockStart = {
+  type: 'file_task'
+  taskId: string
+  title?: string
+  sourceName: string
+  outputFormat: 'docx' | 'xlsx' | 'pptx' | 'pdf'
+  status?: 'processing' | 'done' | 'failed'
+  outputName?: string | null
+  outputSize?: number | null
+  expiresAt?: number
+  error?: string
+}
+
 // ---------- 请求 ----------
 
 export type TextBlockParam = { type: 'text'; text: string }
@@ -200,7 +213,7 @@ export type MessageUsage = {
 }
 
 /** content_block_start 携带的初始内容块；工具块已是完整内容 */
-export type OutputBlockStart = TextBlock | ThinkingBlock | ServerToolBlock | ToolUseBlock
+export type OutputBlockStart = TextBlock | ThinkingBlock | ServerToolBlock | ToolUseBlock | FileTaskBlockStart
 
 export type ContentBlockDelta =
   | { type: 'text_delta'; text: string }
@@ -208,6 +221,13 @@ export type ContentBlockDelta =
   | { type: 'signature_delta'; signature: string }
   | { type: 'citations_delta'; citation: TextCitation }
   | { type: 'input_json_delta'; partial_json: string }
+  | {
+      type: 'file_task_delta'
+      status?: 'processing' | 'done' | 'failed'
+      outputName?: string | null
+      outputSize?: number | null
+      error?: string
+    }
 
 /** 流式事件：SSE 的 event 名与 JSON 的 type 相同，以 message_stop 结束，不发送 [DONE] */
 export type MessageStreamEvent =

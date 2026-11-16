@@ -11,6 +11,7 @@ import {
   clearSentDraft,
   getDraft,
   prepareDraftMessage,
+  setDraftPlugin,
 } from './drafts.js'
 import {
   applyEvent,
@@ -20,6 +21,7 @@ import {
 import {
   toSessionSummary,
   type AssistantMessage,
+  type FileTaskPart,
   type Session,
   type Message,
   type SessionSummary,
@@ -28,6 +30,7 @@ import {
 
 import { useModels, refreshQuota } from '../models.js'
 import { request } from '../auth.js'
+import { createFileTaskFromAttachment, type WorkspaceOutputFormat } from '../workspace/api.js'
 import { expandFolder, setActiveFolder, useFolders } from './folders.js'
 const MODEL = 'deepseek-flash'
 /** 保留最近打开的详情；当前会话、生成中及尚未成功保存的会话不淘汰。 */
@@ -606,12 +609,94 @@ const removeSessionData = async (id: string): Promise<boolean> => {
 export const stopReply = (sessionId: string) => getStreamController(sessionId)?.abort()
 
 /**
+ * 设置/清除会话插件。已有会话走 meta 接口，不 bump revision，也不覆盖消息；
+ * 新对话写入草稿，首条消息发送时由 stream 持久化。
+ */
+export const setSessionPlugin = (sessionId: string | null, pluginId: string | null) => {
+  if (sessionId === null) {
+    setDraftPlugin(null, pluginId)
+    return
+  }
+  if (!getSession(sessionId)) {return}
+  updateSession(sessionId, (session) => ({ ...session, pluginId }))
+  void request(`/api/chats/${encodeURIComponent(sessionId)}/meta`, {
+    method: 'PATCH', body: JSON.stringify({ pluginId }),
+  }).catch(() => undefined)
+}
+
+/** 压缩前确保本地消息已经落库，避免服务端按旧内容生成摘要。 */
+export const flushSession = async (sessionId: string) => {
+  streamFlushes.get(sessionId)?.()
+  persist(sessionId)
+  await saveTasks.get(sessionId)
+}
+
+export type CompactSessionResult = {
+  summary: string
+  compactedIds: string[]
+  compactedAt: number
+  updatedAt: number
+  usage: { input: number; output: number; estimated?: boolean }
+}
+
+export const compactSession = async (sessionId: string): Promise<CompactSessionResult> => {
+  if (!getSession(sessionId)) {throw new Error('会话不存在')}
+  if (getStreamController(sessionId)) {throw new Error('请先停止生成')}
+  if (get().sessionSaveErrors[sessionId]) {throw new Error('会话尚未保存，请稍后重试')}
+  await flushSession(sessionId)
+  const modelId = useModels.getState().selected
+  if (!modelId) {throw new Error('当前没有可用模型')}
+  const result = await request<CompactSessionResult>(`/api/chats/${encodeURIComponent(sessionId)}/compact`, {
+    method: 'POST',
+    body: JSON.stringify({ modelId }),
+  })
+  updateSession(sessionId, (session) => ({
+    ...session,
+    summary: result.summary,
+    compactedIds: result.compactedIds,
+    compactedAt: result.compactedAt,
+    updatedAt: result.updatedAt,
+  }))
+  void refreshQuota()
+  return result
+}
+
+/**
  * 提交指定会话的最新草稿；null 表示新建会话。
  * 同步接收成功才清空草稿，附件原件由会话接管；保存失败仍通过保存入口重试。
  */
 export const sendMessage = (targetSessionId: string | null): boolean => {
   void sendMessageAsync(targetSessionId)
   return true
+}
+/** 确保目标会话存在；null 时创建新会话并切换到它。 */
+const ensureSession = (targetSessionId: string | null, now: number): string | null => {
+  if (targetSessionId !== null) {
+    return deletingSessions.has(targetSessionId) || getStreamController(targetSessionId) || !getSession(targetSessionId)
+      ? null
+      : targetSessionId
+  }
+  const session: Session = {
+    id: createId(),
+    title: '',
+    createdAt: now,
+    updatedAt: now,
+    messages: [],
+    rootMessageId: null,
+    pluginId: getDraft(targetSessionId).pluginId ?? null,
+  }
+  const selectedFolder = useFolders.getState().activeFolderId
+  const folderId = selectedFolder && useFolders.getState().folders.some((folder) => folder.id === selectedFolder)
+    ? selectedFolder
+    : null
+  pendingFolderIds.set(session.id, folderId)
+  touchSession(session.id)
+  set((state) => ({
+    sessions: [{ ...toSessionSummary(session), folderId }, ...state.sessions],
+    sessionCache: { ...state.sessionCache, [session.id]: session },
+    activeId: session.id,
+  }))
+  return session.id
 }
 const sendMessageAsync = async (targetSessionId: string | null) => {
   if (get().importingHistory || !get().ready) {
@@ -622,33 +707,11 @@ const sendMessageAsync = async (targetSessionId: string | null) => {
     return false
   }
   const { text, files } = prepared
+  const messagePluginId = getDraft(targetSessionId).messagePluginId ?? null
   const now = Date.now()
-  let sessionId = targetSessionId
-  if (
-    sessionId !== null &&
-    (deletingSessions.has(sessionId) || getStreamController(sessionId) || !getSession(sessionId))
-  ) {
+  const sessionId = ensureSession(targetSessionId, now)
+  if (!sessionId) {
     return false
-  }
-  if (sessionId === null) {
-    const session: Session = {
-      id: createId(),
-      title: '',
-      createdAt: now,
-      updatedAt: now,
-      messages: [],
-      rootMessageId: null,
-    }
-    sessionId = session.id
-    const selectedFolder = useFolders.getState().activeFolderId
-    const folderId = selectedFolder && useFolders.getState().folders.some((folder) => folder.id === selectedFolder) ? selectedFolder : null
-    pendingFolderIds.set(session.id, folderId)
-    touchSession(session.id)
-    set((state) => ({
-      sessions: [{ ...toSessionSummary(session), folderId }, ...state.sessions],
-      sessionCache: { ...state.sessionCache, [session.id]: session },
-      activeId: session.id,
-    }))
   }
   const current = getSession(sessionId)
   if (!current) {
@@ -683,7 +746,90 @@ const sendMessageAsync = async (targetSessionId: string | null) => {
   }
   persist(sessionId)
   clearSentDraft(targetSessionId)
-  void streamReply(sessionId, reply, { history, question })
+  void streamReply(sessionId, reply, {
+    history,
+    question,
+    pluginId: current.pluginId ?? null,
+    messagePluginId,
+  })
+  return true
+}
+
+const sendFileTaskAsync = async (targetSessionId: string | null, format: WorkspaceOutputFormat) => {
+  if (get().importingHistory || !get().ready) {
+    return false
+  }
+  const prepared = prepareDraftMessage(getDraft(targetSessionId), useUploads.getState().tasks)
+  if (!prepared || prepared.files.length !== 1) {
+    return false
+  }
+  const file = prepared.files[0]
+  if (!file.serverId) {
+    return false
+  }
+  const modelId = useModels.getState().selected
+  if (!modelId) {
+    return false
+  }
+  const now = Date.now()
+  const sessionId = ensureSession(targetSessionId, now)
+  if (!sessionId) {
+    return false
+  }
+  const current = getSession(sessionId)
+  if (!current) {
+    return false
+  }
+  const history = getVisibleMessages(current)
+  const question: UserMessage = {
+    id: createId(),
+    role: 'user',
+    content: prepared.text,
+    files: prepared.files.map(({ id, serverId, name, size, isImage, mimeType }) => ({
+      id,
+      serverId,
+      name,
+      size,
+      isImage,
+      mimeType,
+    })),
+    createdAt: now,
+  }
+  let block: FileTaskPart | null = null
+  let failure = ''
+  try {
+    const data = await createFileTaskFromAttachment({
+      attachmentId: file.serverId,
+      instruction: prepared.text || `整理文件：${file.name}`,
+      format,
+      modelId,
+    })
+    block = { type: 'file_task', taskId: data.task.id, sourceName: file.name, outputFormat: format }
+  } catch (error) {
+    failure = error instanceof Error ? error.message : '文件任务创建失败'
+  }
+  const reply: AssistantMessage = {
+    id: createId(),
+    role: 'assistant',
+    createdAt: Date.now(),
+    model: null,
+    prefix: false,
+    status: 'done',
+    blocks: block ? [block] : [{ type: 'text', text: `文件任务创建失败：${failure}` }],
+  }
+  updateSession(sessionId, (session) => ({
+    ...appendBranch(session, history.at(-1)?.id ?? null, [question, reply]),
+    title: session.title || [...(prepared.text.replace(/\s+/g, ' ').trim() || file.name)].slice(0, 30).join(''),
+    updatedAt: Date.now(),
+  }))
+  persist(sessionId)
+  clearSentDraft(targetSessionId)
+  return true
+}
+
+/** 把带附件的草稿作为服务器文件任务发送；任务卡片会直接出现在聊天里。 */
+export const sendFileTask = (targetSessionId: string | null, format: WorkspaceOutputFormat): boolean => {
+  void sendFileTaskAsync(targetSessionId, format)
   return true
 }
 
@@ -796,7 +942,13 @@ export const continueReply = (sessionId: string, messageId: string) => {
 }
 
 export const retryUpload = regenerateReply
-type Request = { history: Message[]; question: UserMessage; prefix?: AssistantMessage }
+type Request = {
+  history: Message[]
+  question: UserMessage
+  prefix?: AssistantMessage
+  pluginId?: string | null
+  messagePluginId?: string | null
+}
 const streamReply = async (sessionId: string, initial: AssistantMessage, request: Request) => {
   const epoch = historyEpoch
   const controller = new AbortController()
@@ -810,18 +962,21 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   }
   streamFlushes.set(sessionId, flush)
   try {
-    const question = getSession(sessionId)?.messages.find((message) => message.id === request.question.id)
+    const current = getSession(sessionId)
+    const question = current?.messages.find((message) => message.id === request.question.id)
     if (question?.role !== 'user') {throw new Error('消息不存在')}
-    const history = request.history.flatMap((message): { role: 'user' | 'assistant'; content: string }[] => {
+    const compacted = new Set(current?.compactedIds ?? [])
+    const context = request.history.filter((message) => !compacted.has(message.id))
+    const history = context.flatMap((message): { id: string; role: 'user' | 'assistant'; content: string }[] => {
       if (message.role === 'user') {
         const files = message.files.map((file) => file.name).join('、')
-        return [{ role: 'user', content: files ? `${message.content}\n\n[附件：${files}]` : message.content }]
+        return [{ id: message.id, role: 'user', content: files ? `${message.content}\n\n[附件：${files}]` : message.content }]
       }
       if (message.status !== 'done') {return []}
       const text = message.blocks.flatMap((block) => block.type === 'text' && !block.isTemplate ? [block.text] : []).join('\n')
-      return text ? [{ role: 'assistant', content: text }] : []
+      return text ? [{ id: message.id, role: 'assistant', content: text }] : []
     }).slice(-20)
-    const attachmentIds = [...new Set([...request.history, request.question]
+    const attachmentIds = [...new Set([...context, request.question]
       .flatMap((message) => message.role === 'user' ? message.files.map((file) => file.serverId) : [])
       .filter((id): id is string => Boolean(id)))].slice(-10)
     const events = streamChat({
@@ -833,6 +988,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       attachmentIds,
       thinking: initial.thinking ?? false,
       search: initial.search === true,
+      pluginId: request.pluginId !== undefined ? request.pluginId : current?.pluginId ?? null,
+      messagePluginId: request.messagePluginId ?? null,
     }, controller.signal)
     const blockIndexes = new Map<number, number>()
     for await (const event of events) {

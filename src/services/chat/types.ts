@@ -62,8 +62,21 @@ export type TextPart = {
   isTemplate?: boolean
 }
 
+export type FileTaskPart = {
+  type: 'file_task'
+  taskId: string
+  sourceName: string
+  outputFormat: 'docx' | 'xlsx' | 'pptx' | 'pdf'
+  title?: string
+  status?: 'processing' | 'done' | 'failed'
+  outputName?: string | null
+  outputSize?: number | null
+  expiresAt?: number
+  error?: string
+}
+
 /** 服务端工具调用与结果块按协议原样保存；历史请求只回传 read_link 调用与结果 */
-export type ReplyBlock = ThinkingPart | TextPart | ServerToolBlock
+export type ReplyBlock = ThinkingPart | TextPart | ServerToolBlock | FileTaskPart
 
 /**
  * pending：已发出请求，还没收到事件；streaming：正在接收；
@@ -116,6 +129,13 @@ export type Session = {
   /** undefined 表示线性消息列表；null 表示空会话。 */
   rootMessageId?: string | null
   revision?: number
+  /** 当前对话插件；由服务端 meta/stream 维护，不随整会话 PUT 覆盖。 */
+  pluginId?: string | null
+  /** 服务端生成的早期对话摘要；`/compact` 写入。 */
+  summary?: string | null
+  /** 已被摘要覆盖的消息 ID；默认折叠展示。 */
+  compactedIds?: string[]
+  compactedAt?: number | null
 }
 
 /** 会话列表元数据；消息只在打开会话时加载。 */

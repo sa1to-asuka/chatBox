@@ -10,8 +10,12 @@ export class ChatRequestError extends Error {
 }
 export type ChatStreamRequest = {
   sessionId: string; requestId: string; modelId: string
-  prompt: string; history: { role: 'user' | 'assistant'; content: string }[]
+  prompt: string; history: { id?: string; role: 'user' | 'assistant'; content: string }[]
   attachmentIds: string[]; thinking: boolean; search: boolean
+  /** 当前对话插件；显式 null 表示清除会话插件。 */
+  pluginId?: string | null
+  /** 仅本次消息生效的插件。 */
+  messagePluginId?: string | null
 }
 export async function* streamChat(input: ChatStreamRequest, signal: AbortSignal): AsyncGenerator<MessageStreamEvent> {
   const response = await fetch('/api/chat/stream', {

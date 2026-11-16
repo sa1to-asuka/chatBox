@@ -577,3 +577,78 @@ export const IconLogoutOutline16 = () => (
     <path d="M6.2 2.2H3.4C2.63 2.2 2 2.83 2 3.6V12.4C2 13.17 2.63 13.8 3.4 13.8H6.2V12.5H3.4C3.35 12.5 3.3 12.45 3.3 12.4V3.6C3.3 3.55 3.35 3.5 3.4 3.5H6.2V2.2ZM10.575 4.125L9.65 5.05L11.55 6.95H6.1V8.25H11.55L9.65 10.15L10.575 11.075L14 7.65L10.575 4.125Z" fill="currentColor" />
   </svg>
 )
+
+export const IconPluginOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 2.4V5M10 2.4V5M4.2 5H11.8V8.2C11.8 10.3 10.1 12 8 12C5.9 12 4.2 10.3 4.2 8.2V5ZM8 12V14" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconSparklesOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8 1.8L9.15 5.35L12.7 6.5L9.15 7.65L8 11.2L6.85 7.65L3.3 6.5L6.85 5.35L8 1.8Z" stroke="currentColor" strokeWidth={1.3} strokeLinejoin="round" />
+    <path d="M12.6 10.2L13.1 11.7L14.6 12.2L13.1 12.7L12.6 14.2L12.1 12.7L10.6 12.2L12.1 11.7L12.6 10.2Z" stroke="currentColor" strokeWidth={1.1} strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconBookOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2.2 3.2H6.2C7.2 3.2 8 4 8 5V13C8 12 7.2 11.2 6.2 11.2H2.2V3.2ZM13.8 3.2H9.8C8.8 3.2 8 4 8 5V13C8 12 8.8 11.2 9.8 11.2H13.8V3.2Z" stroke="currentColor" strokeWidth={1.3} strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconPenOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10.9 2.3L13.7 5.1L5.9 12.9L2.4 13.6L3.1 10.1L10.9 2.3ZM9.8 3.4L12.6 6.2M3.1 10.1L5.9 12.9" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconTranslateOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 4H8.4M5.2 2V4M3.4 5.2C4.1 7 5.7 8.2 7.6 8.6M9.4 5.2C8.7 7 7.1 8.2 5.2 8.6M10.2 7.4L13.8 14M12.1 10.8H8.3" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconCodeOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M5.4 4.2L1.6 8L5.4 11.8M10.6 4.2L14.4 8L10.6 11.8M9 2.8L7 13.2" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconSlidesOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 3H14V11H2V3ZM8 11V14M5.4 14H10.6M6.6 6.2L9.8 7L6.6 7.8V6.2Z" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconDocOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 1.8H9.6L12.4 4.6V14.2H4V1.8ZM9.6 1.8V4.6H12.4M6.2 7.2H10.2M6.2 9.6H10.2M6.2 12H8.8" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconTableOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 2.8H14V13.2H2V2.8ZM2 6.2H14M2 9.6H14M5.6 2.8V13.2M10.4 2.8V13.2" stroke="currentColor" strokeWidth={1.2} strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconCompressOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2.2 5.8H5.8V2.2M13.8 10.2H10.2V13.8M5.8 2.2L2.2 5.8M10.2 13.8L13.8 10.2M5.2 8H10.8M7 6.2L5.2 8L7 9.8M9 6.2L10.8 8L9 9.8" stroke="currentColor" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+export const IconTargetOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="8" cy="8" r="5.6" stroke="currentColor" strokeWidth={1.3} />
+    <circle cx="8" cy="8" r="2.6" stroke="currentColor" strokeWidth={1.3} />
+    <circle cx="8" cy="8" r="0.9" fill="currentColor" />
+  </svg>
+)
+
+export const IconListOutline16 = () => (
+  <svg width={16} height={16} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M5.2 3.4H14M5.2 8H14M5.2 12.6H14M2.4 3.4H2.5M2.4 8H2.5M2.4 12.6H2.5" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+  </svg>
+)

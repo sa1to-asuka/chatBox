@@ -2,6 +2,9 @@ import { useTranslate } from '../../i18n/index.js'
 import { memo, useEffect, useRef, useState } from 'react'
 import { useTheme } from '../../app/theme.js'
 import { renderMermaid } from '../../services/markdown/mermaid.js'
+import { downloadBlob } from '../../services/office/download.js'
+import { svgToPngBlob } from '../../services/media/svg.js'
+import { showToast } from '../base/toastState.js'
 
 /** 流式绘制最新内容、保留上次有效图；回答结束后才显示渲染错误。 */
 export const MermaidDiagram = memo(function MermaidDiagram({
@@ -88,5 +91,21 @@ export const MermaidDiagram = memo(function MermaidDiagram({
     )
   }
 
-  return <div className="md-mermaid-diagram" dangerouslySetInnerHTML={{ __html: result.svg }} />
+  return (
+    <div className="md-mermaid-shell">
+      <div className="md-mermaid-diagram" dangerouslySetInnerHTML={{ __html: result.svg }} />
+      {!loading ? (
+        <div className="md-mermaid-tools">
+          <button type="button" onClick={() => {
+            downloadBlob(new Blob([result.svg], { type: 'image/svg+xml;charset=utf-8' }), 'chatbox-mermaid.svg')
+          }}>下载 SVG</button>
+          <button type="button" onClick={() => {
+            void svgToPngBlob(result.svg)
+              .then((blob) => downloadBlob(blob, 'chatbox-mermaid.png'))
+              .catch((cause: unknown) => showToast(cause instanceof Error ? cause.message : 'PNG 生成失败'))
+          }}>下载 PNG</button>
+        </div>
+      ) : null}
+    </div>
+  )
 })

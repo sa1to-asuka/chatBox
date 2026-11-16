@@ -20,9 +20,12 @@ export const listOpenAIModels = async (provider: Provider): Promise<ProviderMode
 }
 export async function* streamOpenAI(provider: Provider, input: ChatInput): AsyncGenerator<string, ChatUsage> {
   const client = new OpenAI({ apiKey: provider.key, baseURL: provider.base_url, timeout: 120000, maxRetries: 0 })
-  const messages: ChatCompletionMessageParam[] = input.messages.map((message): ChatCompletionMessageParam => message.role === 'user'
-    ? { role: 'user', content: content(message.content) }
-    : { role: 'assistant', content: typeof message.content === 'string' ? message.content : message.content.filter((part) => part.type === 'text').map((part) => part.text).join('\n') })
+  const messages: ChatCompletionMessageParam[] = [
+    ...(input.system ? [{ role: 'system' as const, content: input.system }] : []),
+    ...input.messages.map((message): ChatCompletionMessageParam => message.role === 'user'
+      ? { role: 'user', content: content(message.content) }
+      : { role: 'assistant', content: typeof message.content === 'string' ? message.content : message.content.filter((part) => part.type === 'text').map((part) => part.text).join('\n') }),
+  ]
   const stream = await client.chat.completions.create({
     model: input.model, messages, stream: true, max_tokens: input.maxTokens,
     stream_options: { include_usage: true },

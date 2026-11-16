@@ -360,6 +360,14 @@
   }
 }
 
+.md-mermaid-shell {
+  margin: 10px 0;
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
 .md-mermaid-diagram {
   padding: 16px;
   overflow: auto;
@@ -371,6 +379,32 @@
     height: auto;
     margin: 0 auto;
   }
+}
+
+.md-mermaid-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 12px 10px;
+}
+
+.md-mermaid-tools button {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.md-mermaid-tools button:hover {
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
 }
 
 .md-mermaid-status {

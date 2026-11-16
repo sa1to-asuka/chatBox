@@ -10,6 +10,7 @@ import {
   IconFolderOutline16,
   IconPanelLeftOutline16,
   IconPinOutline16,
+  IconPluginOutline16,
   IconPlusOutline16,
   IconSearchOutline16,
   IconSettingsOutline16,
@@ -28,6 +29,7 @@ import { Modal } from '../base/Modal.js'
 import { showToast } from '../base/toastState.js'
 import { openSettings } from '../settings/settingsDialogState.js'
 import { openGlobalSearch } from '../search/globalSearchState.js'
+import { openPluginMarket } from '../plugins/pluginMarketState.js'
 import { closeMobileSider, useMobileSider } from './mobileSiderState.js'
 import { SessionItem } from './SessionItem.js'
 import { AccountPanel } from '../account/AccountPanel.js'
@@ -145,6 +147,17 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
       >
         <span className={styles.newChatIcon}><NewChatIcon /></span>
         {t('newChat')}
+      </button>
+      <button
+        type="button"
+        className={clsx(styles.newChat, styles.pluginEntry)}
+        onClick={() => {
+          openPluginMarket()
+          closeMobileSider()
+        }}
+      >
+        <span className={styles.newChatIcon}><IconPluginOutline16 /></span>
+        插件广场
       </button>
       <div className={styles.quickActions}>
         <button type="button" onClick={openGlobalSearch}><IconSearchOutline16 />搜索</button>

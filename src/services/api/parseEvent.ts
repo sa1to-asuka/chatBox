@@ -25,6 +25,15 @@ const readBlock = (value: unknown): OutputBlockStart | null => {
     return null
   }
   switch (value.type) {
+    case 'file_task':
+      if (
+        !isString(value.taskId) ||
+        !isString(value.sourceName) ||
+        !['docx', 'xlsx', 'pptx', 'pdf'].includes(value.outputFormat as string)
+      ) {
+        return null
+      }
+      return value as OutputBlockStart
     case 'text':
       if (!isString(value.text)) {
         return null
@@ -160,6 +169,12 @@ const readDelta = (value: unknown): ContentBlockDelta | null => {
       return isString(value.signature) ? (value as ContentBlockDelta) : null
     case 'citations_delta':
       return isCitation(value.citation) ? (value as ContentBlockDelta) : null
+    case 'file_task_delta':
+      return ['processing', 'done', 'failed'].includes(value.status as string) ||
+        isNullableString(value.outputName) ||
+        typeof value.outputSize === 'number'
+        ? (value as ContentBlockDelta)
+        : null
     default:
       return null
   }

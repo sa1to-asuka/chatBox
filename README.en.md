@@ -18,6 +18,14 @@ This project is a fork of [deepseek-ai/chat-demo](https://github.com/deepseek-ai
 - Conversation search (`Ctrl/Cmd + K`), pinning, collapsible categories and category-scoped new chats.
 - Public read-only share links (revocable) and Markdown / JSON export.
 
+### Agent and workspace
+
+- Web-enabled agent with multi-round tool use, search and workspace access; configure the search backend/model, rounds, search and file limits, and timeouts in the admin console. Set `AGENT_ENABLED=0` to fall back to single-turn calls.
+- Workspace tasks run on the server: track progress, download artifacts, retry or delete them on the `/files` page. Artifacts are kept for 15 days.
+- Slash commands and plugins: built-in templates for solving, planning, writing, translation, code, summaries, PPT, Word, Excel, math, Mermaid, SVG and HTML; enable or disable them in the admin console.
+- Office output: generate and download Word (docx), PPTX and Excel. PPTX can use native SVG → PPTX rendering via PPT Master when configured, otherwise it falls back to PptxGenJS.
+- Rich previews: sandboxed HTML/SVG, image viewer, file-task cards and automatic conversation compaction.
+
 ### Accounts and credits
 
 - Admin-created accounts; set `ALLOW_REGISTRATION=1` to temporarily enable public sign-up. Roles: user, VIP, admin.
@@ -32,6 +40,8 @@ This project is a fork of [deepseek-ai/chat-demo](https://github.com/deepseek-ai
 - Users: create accounts, change role/VIP, daily quota, unlimited flag, disable, reset password.
 - Providers: OpenAI / Anthropic-compatible endpoints; API keys encrypted with AES-GCM.
 - Models: discover and import, set display name, premium flag, multiplier, vision/file/thinking/search capabilities.
+- Agent settings: search backend, search model, rounds, search count, file count and timeout, with connectivity probe.
+- Prompts and plugins: edit the system prompt, restore defaults, and manage built-in/custom slash-command plugins.
 - Usage overview and per-user usage details.
 
 ## Stack
@@ -94,6 +104,9 @@ Open <http://127.0.0.1:3006>, sign in as the admin, then go to **Admin → Provi
 | `TRUST_PROXY` | `false` | Set to `true` behind a reverse proxy |
 | `CONFIG_SECRET` | none | **Required**; encrypts provider API keys. Never change it after setup |
 | `ALLOW_REGISTRATION` | unset | Public registration is closed when unset; set to `1` to open it temporarily |
+| `AGENT_ENABLED` | `1` | Set to `0` to disable the web agent and use single-turn calls |
+| `PPTMASTER_PYTHON` | none | Optional Python path inside the PPT Master virtualenv |
+| `PPTMASTER_HOME` | none | Optional `skills/ppt-master` directory; PptxGenJS is used when unset |
 
 ## Deployment
 
@@ -161,14 +174,17 @@ Creates a consistent `chat.db` snapshot plus all attachments under `backups/<tim
 ```text
 src/                 Frontend (React)
   app/               Shell, routing and theme
-  components/        Chat, sidebar, account, admin, usage, etc.
-  services/          Auth, chat state, models, uploads, sharing
+  components/        Chat, sidebar, account, admin, usage, files workspace, etc.
+  services/          Auth, chat state, workspace tasks, plugins, models, uploads, sharing
 server/              Fastify backend
-  providers/         OpenAI / Anthropic adapters
-  routes*.ts         Auth, chat, model, admin, share and usage APIs
+  providers/         OpenAI / Anthropic adapters (multi-turn and reasoning)
+  routes*.ts         Auth, chat, model, admin, share, usage, workspace, plugin and agent APIs
+  agent-loop.ts      Agent tool loop
+  workspace.ts       Workspace tasks and artifacts (15-day cleanup)
+  pptmaster.ts       Optional native PPTX rendering
   quota.ts           Credit reservation and settlement
   db.ts              SQLite schema and migrations
-shared/              Shared types and Beijing-time helpers
+shared/              Shared types, auto skills and Beijing-time helpers
 scripts/             Backup and local mock upstream
 ```
 
@@ -187,6 +203,7 @@ scripts/             Backup and local mock upstream
 - Provider/model admin console with encrypted key storage.
 - Chats and attachments moved from browser storage to server-side SQLite with cross-device sync.
 - Categories, pinning, full-text conversation search, sharing, export and sandboxed SVG preview.
+- Web agent, workspace tasks, slash-command plugins, prompt management, conversation compaction and Office document generation.
 - Rebranded Chinese-first UI with desktop and mobile layouts.
 
 ## Publishing to your own fork

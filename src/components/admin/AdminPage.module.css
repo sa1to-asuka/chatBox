@@ -3,6 +3,7 @@
   grid-template-columns: 248px minmax(0, 1fr);
   height: 100dvh;
   overflow-y: auto;
+  overflow-anchor: none;
   overscroll-behavior: contain;
   background: #f3f5f0;
   color: #1b2a21;

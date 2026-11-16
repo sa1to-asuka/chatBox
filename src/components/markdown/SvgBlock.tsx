@@ -3,6 +3,8 @@ import { copyText } from '../../utils/clipboard.js'
 import { IconExpandOutline16, IconRefreshOutline16 } from '../base/icons.js'
 import { Modal } from '../base/Modal.js'
 import { showToast } from '../base/toastState.js'
+import { downloadBlob } from '../../services/office/download.js'
+import { svgToPngBlob } from '../../services/media/svg.js'
 import styles from './SvgBlock.module.css'
 
 export const SvgBlock = ({ code, shareToken }: { code: string; shareToken?: string }) => {
@@ -48,13 +50,13 @@ export const SvgBlock = ({ code, shareToken }: { code: string; shareToken?: stri
       <button type="button" onClick={() => void copyText(code).then((ok) => ok ? showToast('已复制 SVG') : showToast('复制失败'))} className={styles.textButton}>复制</button>
       <button type="button" className={styles.textButton} onClick={() => {
         const blob = new Blob([code], { type: 'image/svg+xml;charset=utf-8' })
-        const href = URL.createObjectURL(blob)
-        const anchor = document.createElement('a')
-        anchor.href = href
-        anchor.download = 'chatbox-svg.svg'
-        anchor.click()
-        window.setTimeout(() => URL.revokeObjectURL(href), 1000)
-      }}>下载</button>
+        downloadBlob(blob, 'chatbox-svg.svg')
+      }}>下载 SVG</button>
+      <button type="button" className={styles.textButton} onClick={() => {
+        void svgToPngBlob(code)
+          .then((blob) => downloadBlob(blob, 'chatbox-svg.png'))
+          .catch((cause: unknown) => showToast(cause instanceof Error ? cause.message : 'PNG 生成失败'))
+      }}>下载 PNG</button>
     </div>
     {full ? <Modal title="SVG 动画预览" closable className={styles.fullDialog} mainClassName={styles.fullMain} onClose={() => setFull(false)}>
       {url ? <iframe className={styles.fullFrame} src={url} title="SVG 动画全屏预览" sandbox="allow-scripts" referrerPolicy="no-referrer" allow="camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; clipboard-read 'none'" /> : null}

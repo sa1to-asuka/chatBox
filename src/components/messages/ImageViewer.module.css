@@ -1,0 +1,68 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding:
+    max(24px, calc(env(safe-area-inset-top) + 16px))
+    max(24px, calc(env(safe-area-inset-right) + 16px))
+    max(24px, calc(env(safe-area-inset-bottom) + 16px))
+    max(24px, calc(env(safe-area-inset-left) + 16px));
+  background: rgba(8, 14, 10, .9);
+  backdrop-filter: blur(6px);
+  overscroll-behavior: contain;
+  animation: viewerIn .16s ease-out;
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: pinch-zoom;
+}
+
+.close {
+  position: fixed;
+  top: max(14px, calc(env(safe-area-inset-top) + 8px));
+  right: max(14px, calc(env(safe-area-inset-right) + 8px));
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: background-color .16s ease;
+}
+
+.close:hover { background: rgba(255, 255, 255, .26); }
+.close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.close svg { width: 18px; height: 18px; }
+
+@keyframes viewerIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay { animation: none; }
+}
+
+@media not all and (min-width: 768px) {
+  .overlay { padding: 12px; }
+  .image { border-radius: 6px; }
+}

@@ -31,6 +31,7 @@ export const createConfig = ({
   devServer,
 }: ConfigOptions = {}): Configuration => ({
   mode: dev ? 'development' : 'production',
+  target: 'web',
   entry: './src/main.tsx',
   output: {
     path: path.resolve(root, 'dist'),
@@ -47,9 +48,18 @@ export const createConfig = ({
   // 开发模式预编译异步模块，保持首次加载代码高亮和公式时的页面状态
   lazyCompilation: false,
   resolve: {
+    // 让 pptxgenjs 的 browser 字段把 node:fs/node:https 置空
+    mainFields: ['browser', 'module', 'main'],
     extensions: ['.tsx', '.ts', '.js'],
     // 将 .js 导入路径解析到同名 .ts、.tsx 或 .js 文件
     extensionAlias: { '.js': ['.ts', '.tsx', '.js'] },
+    // docx/pptxgenjs 的 Node 分支会引入 fs/https；浏览器端不会执行这些分支
+    alias: {
+      'node:fs': false,
+      'node:https': false,
+      fs: false,
+      https: false,
+    },
   },
   module: {
     // CSS Modules 使用默认导出：`import styles from './x.module.css'`
@@ -76,6 +86,9 @@ export const createConfig = ({
     ],
   },
   plugins: [
+    // pptxgenjs 的 ESM 里用 import('node:fs'/'node:https') 包裹 Node 分支；
+    // Rspack 不处理 node: scheme，替换成空模块，浏览器端不会走到这些分支。
+    new rspack.NormalModuleReplacementPlugin(/^node:(fs|https)$/, path.resolve(root, 'src/shims/empty.ts')),
     // 经典 defer 脚本支持 file:// 页面的资源加载
     new rspack.HtmlRspackPlugin({
       template: './src/index.html',

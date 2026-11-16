@@ -313,3 +313,7 @@
   .headerActions { opacity: 1; }
   .folderEmpty { min-height: 42px; }
 }
+
+.pluginEntry {
+  margin-top: 8px;
+}

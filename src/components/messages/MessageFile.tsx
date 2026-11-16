@@ -7,6 +7,7 @@ import type { FileAttachment } from '../../services/chat/types.js'
 import { IconPhotoErrorFill20, IconRefreshOutline16 } from '../base/icons.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { FileCard } from '../files/FileCard.js'
+import { ImageViewer } from './ImageViewer.js'
 import styles from './MessageFile.module.css'
 
 /** 原件从 IndexedDB 读出并生成本地地址；undefined 表示加载中，null 表示原件缺失。 */
@@ -57,6 +58,7 @@ export const MessageFile = ({
 }) => {
   const t = useTranslate()
   const url = useFileUrl(file.id)
+  const [viewing, setViewing] = useState(false)
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const upload = useUploadState(file)
   const uploading = upload?.status === 'uploading'
@@ -134,17 +136,20 @@ export const MessageFile = ({
       )
     }
 
-    // 正常态：链接到原件
+    // 正常态：页内查看器，避免 blob 地址在新标签页打开
     return url ? (
-      <a
-        className={clsx(styles.image, styles.imageThumb)}
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        title={file.name}
-      >
-        {preview}
-      </a>
+      <>
+        <button
+          type="button"
+          className={clsx(styles.image, styles.imageThumb)}
+          title={file.name}
+          aria-label={`查看图片 ${file.name}`}
+          onClick={() => setViewing(true)}
+        >
+          {preview}
+        </button>
+        {viewing ? <ImageViewer src={url} alt={file.name} onClose={() => setViewing(false)} /> : null}
+      </>
     ) : (
       // 原件还没加载出来（极短暂）
       <div className={styles.image} />

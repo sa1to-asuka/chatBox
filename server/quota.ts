@@ -50,6 +50,50 @@ export const maxOutputFor = (user: UserQuota, inputTokens: number, multiplier: n
   const quota = db.prepare('SELECT allowance,reserved,used FROM quota_days WHERE user_id=? AND day=?').get(user.id, day) as QuotaRow
   return Math.max(64, Math.min(16384, Math.floor((quota.reserved / multiplier) - inputTokens)))
 }
+
+/**
+ * 为多轮 Agent 的下一轮补预留。第 2 轮 prompt 包含第 1 轮，供应商按完整 prompt 计费，
+ * 所以 extraInputTokens 必须传本轮完整序列化后的估算，而不是新增消息的增量。
+ * 返回本轮可用的 output allowance；额度不足时返回 null。
+ */
+export const topUpReservation = (
+  user: UserQuota,
+  requestId: string,
+  extraInputTokens: number,
+  multiplier: number,
+  desiredOutput = 4096
+): number | null => {
+  if (user.unlimited) return 16384
+  db.exec('BEGIN IMMEDIATE')
+  try {
+    const ledger = db.prepare('SELECT status,day,reserved FROM usage_ledger WHERE request_id=?')
+      .get(requestId) as { status: string; day: string; reserved: number } | undefined
+    if (!ledger || ledger.status !== 'reserved') {
+      db.exec('ROLLBACK')
+      return null
+    }
+    const quota = db.prepare('SELECT allowance,reserved,used FROM quota_days WHERE user_id=? AND day=?')
+      .get(user.id, ledger.day) as QuotaRow
+    const desired = Math.max(64, Math.min(16384, Math.floor(desiredOutput)))
+    const extra = Math.ceil((Math.max(0, extraInputTokens) + desired) * multiplier)
+    if (quota.allowance - quota.used - quota.reserved < extra) {
+      db.exec('ROLLBACK')
+      return null
+    }
+    const updated = db.prepare(`UPDATE quota_days SET reserved=reserved+?
+      WHERE user_id=? AND day=? AND allowance-used-reserved>=?`).run(extra, user.id, ledger.day, extra)
+    if (updated.changes !== 1) {
+      db.exec('ROLLBACK')
+      return null
+    }
+    db.prepare('UPDATE usage_ledger SET reserved=reserved+? WHERE request_id=?').run(extra, requestId)
+    db.exec('COMMIT')
+    return desired
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
+}
 export const reconcileReservations = (): void => {
   const cutoff = Date.now() - 30 * 60 * 1000
   const stale = db.prepare(`SELECT request_id,user_id,day,reserved FROM usage_ledger

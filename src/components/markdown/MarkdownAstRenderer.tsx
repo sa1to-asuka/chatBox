@@ -201,6 +201,7 @@ const MarkdownBlockContentOrDefinitionContent = memo(
               infostring={node.lang || 'text'}
               loading={loading}
               shareToken={shareToken}
+              meta={node.meta ?? undefined}
             />
           )
         case 'table':

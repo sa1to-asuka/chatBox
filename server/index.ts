@@ -7,6 +7,9 @@ import path from 'node:path'
 import { existsSync } from 'node:fs'
 import { registerAuth } from './routes-auth.js'
 import { registerApi } from './routes.js'
+import { registerPluginRoutes } from './routes-plugins.js'
+import { registerWorkspaceRoutes } from './routes-workspace.js'
+import { cleanupWorkspace, markInterruptedWorkspaceTasks } from './workspace.js'
 import { HttpError, sendError } from './http.js'
 import { db } from './db.js'
 import { reconcileReservations } from './quota.js'
@@ -14,6 +17,7 @@ import { registerUsageRoutes } from './routes-usage.js'
 import { registerChatTools } from './routes-chat-tools.js'
 import { registerShareRoutes } from './routes-share.js'
 import { registerSvgPreviewRoutes } from './svg-preview.js'
+import { registerAgentRoutes } from './routes-agent.js'
 
 if (process.env.NODE_ENV === 'production' && (process.env.CONFIG_SECRET?.length ?? 0) < 32) {
   throw new Error('生产环境必须设置至少 32 个字符的 CONFIG_SECRET')
@@ -21,6 +25,9 @@ if (process.env.NODE_ENV === 'production' && (process.env.CONFIG_SECRET?.length 
 
 export const buildApp = async () => {
   reconcileReservations()
+  markInterruptedWorkspaceTasks()
+  void cleanupWorkspace()
+  setInterval(() => void cleanupWorkspace(), 3_600_000).unref()
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test', trustProxy: process.env.TRUST_PROXY === 'true', bodyLimit: 1024 * 1024 })
   await app.register(cookie)
   await app.register(multipart, { limits: { fileSize: 32 * 1024 * 1024, files: 1 } })
@@ -44,6 +51,9 @@ export const buildApp = async () => {
   })
   registerAuth(app)
   registerApi(app)
+  registerPluginRoutes(app)
+  registerWorkspaceRoutes(app)
+  registerAgentRoutes(app)
   registerUsageRoutes(app)
   registerChatTools(app)
   registerShareRoutes(app)

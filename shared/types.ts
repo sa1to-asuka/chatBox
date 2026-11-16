@@ -4,7 +4,7 @@ export type SearchMode = 'none' | 'openai' | 'anthropic' | 'deepseek'
 export const SEARCH_MODES: readonly SearchMode[] = ['none', 'openai', 'anthropic', 'deepseek']
 export const isSearchMode = (value: unknown): value is SearchMode =>
   typeof value === 'string' && (SEARCH_MODES as readonly string[]).includes(value)
-export type ModelCapabilities = { vision: boolean; files: boolean; thinking: boolean; search: boolean }
+export type ModelCapabilities = { vision: boolean; files: boolean; thinking: boolean; search: boolean; tools: boolean }
 export type PublicModel = {
   id: string
   name: string

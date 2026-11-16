@@ -14,6 +14,13 @@ import { estimateInputTokens, maxOutputFor, reserve, settle } from './quota.js'
 import { streamOpenAI, listOpenAIModels } from './providers/openai.js'
 import { streamAnthropic, listAnthropicModels } from './providers/anthropic.js'
 import { event } from './providers/shared.js'
+import { detectAutoPlugin, getEnabledPluginForUser, getPlugin } from './plugins.js'
+import { getSystemPrompt, isSystemPromptEnabled } from './settings.js'
+import { AGENT_TOOL_PROMPT, SUMMARY_PROMPT_PREFIX, currentTimePrompt } from './prompts.js'
+import { compactChat } from './compact.js'
+import { getAgentConfig, getSearchModel, resolveSearchBackend } from './agent-config.js'
+import { runAgentLoop } from './agent-loop.js'
+import type { ProviderTurn } from './providers/turns.js'
 import { beijingDay, clampInteger, isSearchMode, parse, type ModelCapabilities, type ProviderModel, type SearchMode } from '../shared/types.js'
 
 const id = () => randomUUID()
@@ -22,7 +29,27 @@ const normalizeCapabilities = (model: { capabilities: string; search_mode: strin
   return {
     vision: value.vision === true, files: value.files === true,
     thinking: value.thinking === true, search: model.search_mode !== 'none',
+    tools: value.tools !== false,
   }
+}
+
+const searchTopic = (prompt: string): string => {
+  const cleaned = prompt
+    .replace(/^\s*\/\w+\s*/, '')
+    .replace(/(帮我|请|麻烦|搜索一下|搜索|联网|查一下|查一查|做一个|做一份|做个|生成|制作|整理|写一份|写一个|输出|关于|主题|PPT|pptx|Word|Excel|演示文稿|幻灯片|文档|表格)/gi, ' ')
+    .replace(/[：:，,。.!?！？、]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return (cleaned.length >= 4 ? cleaned : prompt.trim()).slice(0, 160)
+}
+
+const detectFileIntent = (prompt: string): 'pptx' | 'docx' | 'xlsx' | null => {
+  const verb = /(做|制作|生成|设计|整理|输出|弄|来|搞|写)/.test(prompt)
+  if (!verb) return null
+  if (/ppt|pptx|幻灯片|演示文稿|演示/i.test(prompt)) return 'pptx'
+  if (/word|docx|文档|报告|文稿/i.test(prompt)) return 'docx'
+  if (/excel|xlsx|表格|数据表/i.test(prompt)) return 'xlsx'
+  return null
 }
 const modelRow = (modelId: string, user: UserRow) => {
   const model = db.prepare(`SELECT m.*,p.type,p.base_url,p.api_key_encrypted,p.name provider_name
@@ -75,10 +102,18 @@ export const registerApi = (app: FastifyInstance) => {
   app.get('/api/chats/:id', async (request) => {
     const user = currentUser(request)
     const { id: chatId } = request.params as { id: string }
-    const chat = db.prepare('SELECT * FROM chat_sessions WHERE id=? AND user_id=?').get(chatId, user.id) as { title: string; root_message_id: string | null; revision: number; created_at: number; updated_at: number } | undefined
+    const chat = db.prepare('SELECT * FROM chat_sessions WHERE id=? AND user_id=?').get(chatId, user.id) as {
+      title: string; root_message_id: string | null; revision: number; created_at: number; updated_at: number
+      plugin_id: string | null; summary: string | null; compacted_ids: string; compacted_at: number | null
+    } | undefined
     if (!chat) throw new HttpError(404, '会话不存在')
     const rows = db.prepare('SELECT data FROM chat_messages WHERE user_id=? AND session_id=? ORDER BY created_at').all(user.id, chatId) as { data: string }[]
-    return { session: { id: chatId, title: chat.title, createdAt: chat.created_at, updatedAt: chat.updated_at, rootMessageId: chat.root_message_id, messages: rows.map((row) => parse(row.data)), revision: chat.revision } }
+    return { session: {
+      id: chatId, title: chat.title, createdAt: chat.created_at, updatedAt: chat.updated_at,
+      rootMessageId: chat.root_message_id, messages: rows.map((row) => parse(row.data)), revision: chat.revision,
+      pluginId: chat.plugin_id, summary: chat.summary,
+      compactedIds: parse<string[]>(chat.compacted_ids || '[]'), compactedAt: chat.compacted_at,
+    } }
   })
   app.put('/api/chats/:id', async (request, reply) => {
     try {
@@ -190,15 +225,56 @@ export const registerApi = (app: FastifyInstance) => {
     const chatId = requireString(data.sessionId, '会话', 100)
     const requestId = requireString(data.requestId, '请求', 100)
     const prompt = requireString(data.prompt, '消息', 50000)
-    const ownedChat = db.prepare('SELECT id FROM chat_sessions WHERE id=? AND user_id=?').get(chatId, user.id)
+    const ownedChat = db.prepare('SELECT id,plugin_id,summary,compacted_ids FROM chat_sessions WHERE id=? AND user_id=?')
+      .get(chatId, user.id) as { id: string; plugin_id: string | null; summary: string | null; compacted_ids: string } | undefined
     if (!ownedChat) {
       const now = Date.now()
       db.prepare('INSERT INTO chat_sessions(id,user_id,created_at,updated_at) VALUES(?,?,?,?)').run(chatId, user.id, now, now)
     }
-    const attachmentIds = Array.isArray(data.attachmentIds) ? data.attachmentIds.slice(0, 10) as string[] : []
+    const sessionRow = ownedChat ?? { id: chatId, plugin_id: null, summary: null, compacted_ids: '[]' }
+    const requestedPluginId = Object.hasOwn(data, 'pluginId')
+      ? (typeof data.pluginId === 'string' ? data.pluginId : null)
+      : sessionRow.plugin_id
+    const requestedPlugin = getEnabledPluginForUser(user.id, requestedPluginId)
+    const conversationPlugin = requestedPlugin?.scope === 'conversation' ? requestedPlugin : null
+    const messagePlugin = getEnabledPluginForUser(
+      user.id,
+      typeof data.messagePluginId === 'string' ? data.messagePluginId : null
+    ) ?? (requestedPlugin?.scope === 'message' ? requestedPlugin : null)
+    // 用户没有手动选插件时，按提示词自动匹配数学/图表/SVG/HTML 技能。
+    const autoPlugin = conversationPlugin || messagePlugin ? null : detectAutoPlugin(user.id, prompt)
+    // 即使会话里固定了其他插件，只要当前消息明确要求生成 PPT/Word/Excel，
+    // 也要补上文件工具和对应的输出格式提示，避免模型只回一段 JSON。
+    const fileIntent = detectFileIntent(prompt)
+    const filePlugin = fileIntent ? getPlugin(`builtin-${fileIntent}`) : undefined
+    const activeMessagePlugin = messagePlugin ?? autoPlugin ?? (filePlugin?.enabled ? filePlugin : null)
+    if (Object.hasOwn(data, 'pluginId') && requestedPluginId === null) {
+      db.prepare('UPDATE chat_sessions SET plugin_id=NULL WHERE id=? AND user_id=?').run(chatId, user.id)
+    } else if (conversationPlugin && conversationPlugin.id !== sessionRow.plugin_id) {
+      db.prepare('UPDATE chat_sessions SET plugin_id=? WHERE id=? AND user_id=?').run(conversationPlugin.id, chatId, user.id)
+    }
+    const compactedIds = new Set(parse<string[]>(sessionRow.compacted_ids || '[]'))
     const capabilities = normalizeCapabilities(model)
+    const agentConfig = getAgentConfig()
+    const searchBackend = resolveSearchBackend(agentConfig)
+    const summaryModel = getSearchModel(agentConfig.searchModelId)
+    const nativeSearch = data.search === true && model.search_mode !== 'none'
+    const useAgent = agentConfig.enabled && capabilities.tools && !nativeSearch
+    const systemParts: string[] = []
+    if (isSystemPromptEnabled()) systemParts.push(getSystemPrompt())
+    if (sessionRow.summary) systemParts.push(`${SUMMARY_PROMPT_PREFIX}\n<summary>\n${sessionRow.summary}\n</summary>`)
+    if (conversationPlugin) systemParts.push(`当前对话模式：${conversationPlugin.name}\n${conversationPlugin.prompt}`)
+    if (activeMessagePlugin && activeMessagePlugin.id !== conversationPlugin?.id) {
+      systemParts.push(`本次任务模式：${activeMessagePlugin.name}\n${activeMessagePlugin.prompt}`)
+    }
+    systemParts.push(currentTimePrompt())
+    if (useAgent) systemParts.push(AGENT_TOOL_PROMPT)
+    const system = systemParts.join('\n\n') || undefined
+    const attachmentIds = Array.isArray(data.attachmentIds) ? data.attachmentIds.slice(0, 10) as string[] : []
     const search = data.search === true
-    if (search && model.search_mode === 'none') throw new HttpError(400, '当前模型未启用联网搜索', 'search_unavailable')
+    if (search && model.search_mode === 'none' && !useAgent) {
+      throw new HttpError(400, '当前模型未启用联网搜索', 'search_unavailable')
+    }
     const parts = await attachmentContent(user.id, attachmentIds, capabilities)
     const contentParts: Exclude<import('./providers/shared.js').InputContent, string> = typeof parts === 'string' ? [] : parts
     const messages: { role: 'user' | 'assistant'; content: import('./providers/shared.js').InputContent }[] = []
@@ -206,15 +282,16 @@ export const registerApi = (app: FastifyInstance) => {
     let historyChars = 0
     for (const item of history) {
       if (!item || typeof item !== 'object') continue
-      const message = item as { role?: unknown; content?: unknown }
+      const message = item as { role?: unknown; content?: unknown; id?: unknown }
       if (!['user', 'assistant'].includes(String(message.role)) || typeof message.content !== 'string') continue
+      if (typeof message.id === 'string' && compactedIds.has(message.id)) continue
       const content = message.content.slice(0, 20000)
       historyChars += content.length
       if (historyChars > 120000) break
       messages.push({ role: message.role as 'user' | 'assistant', content })
     }
     messages.push({ role: 'user', content: [...contentParts, { type: 'text' as const, text: prompt }] })
-    const inputTokens = estimateInputTokens(JSON.stringify(messages)) + contentParts.filter((part) => part.type === 'image').length * 1024
+    const inputTokens = estimateInputTokens(JSON.stringify(messages) + '\n' + (system ?? '')) + contentParts.filter((part) => part.type === 'image').length * 1024
     reserve(user, requestId, model.id, inputTokens, model.multiplier)
     const maxTokens = maxOutputFor(user, inputTokens, model.multiplier)
     let usage = { input: inputTokens, output: 0, estimated: true }
@@ -227,20 +304,56 @@ export const registerApi = (app: FastifyInstance) => {
     reply.raw.write(event('request', { requestId }))
     try {
       const provider = { id: model.provider_id, name: model.provider_name, type: model.type, base_url: model.base_url, key: decrypt(model.api_key_encrypted) }
-      const stream = model.type === 'openai'
-        ? streamOpenAI(provider, { model: model.upstream_id, messages, maxTokens, thinking: data.thinking === true, searchMode: search ? model.search_mode as SearchMode : 'none', signal: abort.signal, usage })
-        : streamAnthropic(provider, { model: model.upstream_id, messages, maxTokens, thinking: data.thinking === true, searchMode: search ? model.search_mode as SearchMode : 'none', signal: abort.signal, usage })
-      while (true) {
-        const next = await stream.next()
-        if (next.done) { usage = next.value; break }
-        if (!reply.raw.write(next.value)) await new Promise<void>((resolve) => reply.raw.once('drain', resolve))
+      if (useAgent) {
+        const turns: ProviderTurn[] = messages.map((message) => message.role === 'user'
+          ? { role: 'user' as const, content: message.content }
+          : {
+              role: 'assistant' as const,
+              text: typeof message.content === 'string'
+                ? message.content
+                : message.content.filter((part) => part.type === 'text').map((part) => part.text).join('\n'),
+            })
+        const stream = runAgentLoop({
+          user,
+          provider,
+          model,
+          system,
+          messages: turns,
+          maxTokens,
+          thinking: data.thinking === true,
+          requestId,
+          signal: abort.signal,
+          usage,
+          config: agentConfig,
+          backend: searchBackend,
+          summaryModel,
+          activePlugin: activeMessagePlugin?.command ?? null,
+          presearchQuery: agentConfig.presearch && searchBackend && prompt.trim().length >= 4 &&
+            !['math', 'mermaid', 'svg', 'html'].includes(activeMessagePlugin?.command ?? '') &&
+            !/^(你好|hi|hello|谢谢|在吗|好的|ok)[!！。.?\s]*$/i.test(prompt.trim())
+            ? searchTopic(prompt)
+            : null,
+        })
+        while (true) {
+          const next = await stream.next()
+          if (next.done) { usage = next.value; break }
+          if (!reply.raw.write(next.value)) await new Promise<void>((resolve) => reply.raw.once('drain', resolve))
+        }
+      } else {
+        const stream = model.type === 'openai'
+          ? streamOpenAI(provider, { model: model.upstream_id, messages, maxTokens, thinking: data.thinking === true, searchMode: search ? model.search_mode as SearchMode : 'none', signal: abort.signal, usage, system })
+          : streamAnthropic(provider, { model: model.upstream_id, messages, maxTokens, thinking: data.thinking === true, searchMode: search ? model.search_mode as SearchMode : 'none', signal: abort.signal, usage, system })
+        while (true) {
+          const next = await stream.next()
+          if (next.done) { usage = next.value; break }
+          if (!reply.raw.write(next.value)) await new Promise<void>((resolve) => reply.raw.once('drain', resolve))
+        }
       }
     } catch (error) {
       failed = abort.signal.aborted ? '用户停止生成' : error instanceof Error ? error.message : '上游服务错误'
       request.log.error({ err: error }, 'chat stream failed')
       if (!abort.signal.aborted && !reply.raw.writableEnded) {
-        const searchFailed = search && search !== undefined
-        reply.raw.write(event('stream_error', searchFailed
+        reply.raw.write(event('stream_error', nativeSearch
           ? { error: '联网搜索请求失败。请关闭搜索后重试，或检查该供应商是否支持此搜索方式。', code: 'search_unavailable' }
           : { error: '模型服务暂时不可用，请稍后重试', code: 'provider_error' }))
       }
@@ -248,6 +361,20 @@ export const registerApi = (app: FastifyInstance) => {
       settle(requestId, usage, failed)
       if (!reply.raw.writableEnded) reply.raw.end()
     }
+  })
+  app.post('/api/chats/:id/compact', async (request, reply) => {
+    try {
+      const user = currentUser(request)
+      const chatId = (request.params as { id: string }).id
+      const data = body(request)
+      const model = modelRow(requireString(data.modelId, '模型', 100), user)
+      const keepRecent = data.keepRecent === undefined ? 6 : clampInteger(data.keepRecent, 2, 20)
+      if (keepRecent === null) throw new HttpError(400, '保留条数不正确')
+      const abort = new AbortController()
+      request.raw.on('aborted', () => abort.abort())
+      reply.raw.on('close', () => { if (!reply.raw.writableEnded) abort.abort() })
+      return await compactChat({ user, chatId, model, keepRecent, signal: abort.signal })
+    } catch (error) { return sendError(reply, error) }
   })
   registerAdmin(app)
 }
@@ -392,6 +519,7 @@ const registerAdmin = (app: FastifyInstance) => {
       typeof data.enabled === 'boolean' ? Number(data.enabled) : model.enabled, JSON.stringify({
         vision: capabilities.vision === true, files: capabilities.files === true,
         thinking: capabilities.thinking === true, search: searchMode !== 'none',
+        tools: capabilities.tools !== false,
       }), searchMode, (request.params as { id: string }).id)
     return { ok: true }
   })

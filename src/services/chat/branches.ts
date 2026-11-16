@@ -36,6 +36,15 @@ export const getVisibleMessages = (session: Session): Message[] => {
 
 export type MessageVersions = { ids: string[]; index: number }
 
+/** 按 compactedIds 拆出折叠的早期消息；顺序保持当前分支路径。 */
+export const splitCompacted = (session: Session, path: Message[]) => {
+  const ids = new Set(session.compactedIds ?? [])
+  return {
+    hidden: path.filter((message) => ids.has(message.id)),
+    shown: path.filter((message) => !ids.has(message.id)),
+  }
+}
+
 /** 一次遍历收集兄弟版本；版本列表未变化时复用旧对象与索引，避免流式正文更新重绘历史消息。 */
 export const buildMessageVersions = (
   session: Session,

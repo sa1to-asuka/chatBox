@@ -1,0 +1,170 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 900px;
+}
+
+.intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border: 1px solid #e2e6e1;
+  border-radius: 10px;
+  background: #f7f9f6;
+}
+
+.intro h3 {
+  margin: 0 0 6px;
+  color: #173b2b;
+  font-size: 16px;
+}
+
+.intro p {
+  margin: 0;
+  max-width: 620px;
+  color: #6b7a70;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+  color: #405247;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.switch span {
+  position: relative;
+  width: 26px;
+  height: 15px;
+  border-radius: 999px;
+  background: #cfd8cf;
+  transition: background .18s ease;
+}
+
+.switch span::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .18s ease;
+}
+
+.switch input:checked + span {
+  background: #2b5d45;
+}
+
+.switch input:checked + span::after {
+  transform: translateX(11px);
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #405247;
+  font-size: 12px;
+}
+
+.editor textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #dce3dc;
+  border-radius: 9px;
+  outline: 0;
+  background: #fff;
+  color: #1e2c24;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.75;
+  resize: vertical;
+}
+
+.editor textarea:focus {
+  border-color: #65856e;
+  box-shadow: 0 0 0 3px #e3ece3;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: #849189;
+  font-size: 11px;
+}
+
+.meta span:last-child {
+  color: #a2703f;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff0ed;
+  color: #b13e36;
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.defaultBox {
+  border-top: 1px solid #e8ece6;
+  padding-top: 12px;
+  color: #6b7a70;
+  font-size: 12px;
+}
+
+.defaultBox summary {
+  cursor: pointer;
+}
+
+.defaultBox pre {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f7f9f6;
+  color: #526057;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.state {
+  padding: 30px 0;
+  color: #7b8b7f;
+  font-size: 13px;
+}
+
+@media (max-width: 767px) {
+  .intro {
+    flex-direction: column;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+}

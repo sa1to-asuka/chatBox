@@ -3,12 +3,14 @@ import { useIsMobile } from '../../app/viewport.js'
 import {
   buildMessageVersions,
   getVisibleMessages,
+  splitCompacted,
   type MessageVersions,
 } from '../../services/chat/branches.js'
 import { selectMessageVersion } from '../../services/chat/store.js'
 import type { Session } from '../../services/chat/types.js'
 import { closeSearchPanel } from '../search/searchPanelState.js'
 import { AssistantMessage } from './AssistantMessage.js'
+import { CompactBanner } from './CompactBanner.js'
 import { ScrollToBottomContext } from './scrollContext.js'
 import { UserMessage } from './UserMessage.js'
 import type { Message } from '../../services/chat/types.js'
@@ -49,6 +51,8 @@ export const MessageList = ({
   const scrollTopRef = useRef(0)
   const restoreScrollRef = useRef<{ messageId: string; top: number } | null>(null)
   const messages = getVisibleMessages(session)
+  const { hidden, shown } = splitCompacted(session, messages)
+  const [showCompacted, setShowCompacted] = useState(false)
   const [previousVersions, setPreviousVersions] = useState(() =>
     buildMessageVersions(session, new Map())
   )
@@ -59,7 +63,7 @@ export const MessageList = ({
   if (versions !== previousVersions) {
     setPreviousVersions(versions)
   }
-  const lastMessageId = messages.at(-1)?.id
+  const lastMessageId = shown.at(-1)?.id ?? messages.at(-1)?.id
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current
     if (el && stickyRef.current) {
@@ -100,6 +104,7 @@ export const MessageList = ({
   }, [session.id, lastMessageId, scrollToBottom])
 
   useEffect(closeSearchPanel, [session.id, lastMessageId])
+  useEffect(() => { setShowCompacted(false) }, [session.id])
 
   const selectVersion = useCallback(
     (messageId: string, anchorTop: number) => {
@@ -139,39 +144,54 @@ export const MessageList = ({
     return () => el.removeEventListener('scroll', onScroll)
   }, [isMobile, scrollToBottom])
 
-  const lastIndex = messages.length - 1
-  const uploadRetryId = getUploadRetryId(messages, streaming)
+  const uploadRetryId = getUploadRetryId(shown, streaming)
+  const renderMessage = (message: Message, index: number, total: number, readOnly = false) => {
+    const isLast = index === total - 1
+    return message.role === 'user' ? (
+      <UserMessage
+        key={message.id}
+        sessionId={session.id}
+        message={message}
+        retryUploadId={readOnly ? null : uploadRetryId}
+        isFirst={index === 0}
+        isLast={isLast || index === total - 2}
+        busy={streaming || readOnly}
+        versions={versions.get(message.id) ?? EMPTY_VERSIONS}
+        onSelectVersion={selectVersion}
+      />
+    ) : (
+      <AssistantMessage
+        key={message.id}
+        sessionId={session.id}
+        message={message}
+        isLast={isLast}
+        streaming={!readOnly && streaming && isLast}
+        busy={streaming || readOnly}
+        versions={versions.get(message.id) ?? EMPTY_VERSIONS}
+        onSelectVersion={selectVersion}
+      />
+    )
+  }
   return (
     <ScrollToBottomContext.Provider value={scrollToBottom}>
       <div ref={isMobile ? undefined : scrollRef} className={styles.container}>
         <div ref={isMobile ? scrollRef : undefined} className={styles.scroll}>
           <div ref={contentRef} className={styles.column}>
-            {messages.map((message, index) =>
-              message.role === 'user' ? (
-                <UserMessage
-                  key={message.id}
-                  sessionId={session.id}
-                  message={message}
-                  retryUploadId={uploadRetryId}
-                  isFirst={index === 0}
-                  isLast={index === lastIndex || index === lastIndex - 1}
-                  busy={streaming}
-                  versions={versions.get(message.id) ?? EMPTY_VERSIONS}
-                  onSelectVersion={selectVersion}
-                />
-              ) : (
-                <AssistantMessage
-                  key={message.id}
-                  sessionId={session.id}
-                  message={message}
-                  isLast={index === lastIndex}
-                  streaming={streaming && index === lastIndex}
-                  busy={streaming}
-                  versions={versions.get(message.id) ?? EMPTY_VERSIONS}
-                  onSelectVersion={selectVersion}
-                />
-              )
-            )}
+            {session.summary && hidden.length > 0 ? (
+              <CompactBanner
+                summary={session.summary}
+                count={hidden.length}
+                compactedAt={session.compactedAt}
+                expanded={showCompacted}
+                onToggle={() => setShowCompacted((value) => !value)}
+              />
+            ) : null}
+            {showCompacted && hidden.length > 0 ? (
+              <div className={styles.compactedGroup}>
+                {hidden.map((message, index) => renderMessage(message, index, hidden.length, true))}
+              </div>
+            ) : null}
+            {shown.map((message, index) => renderMessage(message, index, shown.length))}
           </div>
         </div>
         {footer}

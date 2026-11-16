@@ -4,6 +4,7 @@ import { currentUser } from './auth.js'
 import { db } from './db.js'
 import { body, cleanText, HttpError, requireString, sendError } from './http.js'
 import { messageText, readChat, visibleMessages } from './visibility.js'
+import { getPlugin } from './plugins.js'
 
 const folderName = (value: unknown) => cleanText(requireString(value, '文件夹名称', 40), 40)
 const escapeLike = (value: string) => value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')
@@ -71,20 +72,27 @@ export const registerChatTools = (app: FastifyInstance) => {
       const user = currentUser(request)
       const chatId = (request.params as { id: string }).id
       const data = body(request)
-      const chat = db.prepare('SELECT pinned_at pinnedAt,folder_id folderId FROM chat_sessions WHERE id=? AND user_id=?')
-        .get(chatId, user.id) as { pinnedAt: number | null; folderId: string | null } | undefined
+      const chat = db.prepare('SELECT pinned_at pinnedAt,folder_id folderId,plugin_id pluginId FROM chat_sessions WHERE id=? AND user_id=?')
+        .get(chatId, user.id) as { pinnedAt: number | null; folderId: string | null; pluginId: string | null } | undefined
       if (!chat) throw new HttpError(404, '会话不存在')
       let pinnedAt = chat.pinnedAt
       let folderId = chat.folderId
+      let pluginId = chat.pluginId
       if (typeof data.pinned === 'boolean') pinnedAt = data.pinned ? Date.now() : null
       if (data.folderId === null) folderId = null
       else if (typeof data.folderId === 'string') {
         if (!ownsFolder(user.id, data.folderId)) throw new HttpError(400, '文件夹不存在')
         folderId = data.folderId
       }
-      db.prepare('UPDATE chat_sessions SET pinned=?,pinned_at=?,folder_id=?,updated_at=? WHERE id=? AND user_id=?')
-        .run(pinnedAt ? 1 : 0, pinnedAt, folderId, Date.now(), chatId, user.id)
-      return { pinned: Boolean(pinnedAt), pinnedAt, folderId }
+      if (data.pluginId === null) pluginId = null
+      else if (typeof data.pluginId === 'string') {
+        const plugin = getPlugin(data.pluginId)
+        if (!plugin) throw new HttpError(400, '插件不存在')
+        pluginId = plugin.id
+      }
+      db.prepare('UPDATE chat_sessions SET pinned=?,pinned_at=?,folder_id=?,plugin_id=?,updated_at=? WHERE id=? AND user_id=?')
+        .run(pinnedAt ? 1 : 0, pinnedAt, folderId, pluginId, Date.now(), chatId, user.id)
+      return { pinned: Boolean(pinnedAt), pinnedAt, folderId, pluginId }
     } catch (error) { return sendError(reply, error) }
   })
   app.get('/api/search', async (request) => {

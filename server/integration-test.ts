@@ -1,11 +1,16 @@
 import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
+import { existsSync } from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
 import { strToU8, zipSync } from 'fflate'
 import { db } from './db.js'
 import { hashPassword } from './auth.js'
+import { cleanupWorkspace, workspaceTaskDir } from './workspace.js'
 
 let lastMessages: { role: string; content: unknown }[] = []
 let lastWebSearch = false
+let lastSystem = ''
 const upstream = createServer((request, response) => {
   if (request.url === '/v1/models') {
     response.writeHead(200, { 'Content-Type': 'application/json' })
@@ -25,6 +30,9 @@ const upstream = createServer((request, response) => {
       const payload = JSON.parse(body) as { stream?: boolean; messages?: { role: string; content: unknown }[]; web_search_options?: unknown }
       lastMessages = payload.messages ?? []
       lastWebSearch = Boolean(payload.web_search_options)
+      const systemMessage = lastMessages.find((message) => message.role === 'system')
+      lastSystem = systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : ''
+      const askedForCompact = lastSystem.includes('对话压缩器')
       const askedForReasoning = JSON.stringify(lastMessages).includes('思维链测试')
       if (!payload.stream) {
         response.writeHead(400)
@@ -35,6 +43,40 @@ const upstream = createServer((request, response) => {
       const chunk = (delta: object, finish: string | null = null, usage?: object) => response.write(
         `data: ${JSON.stringify({ id: 'mock', object: 'chat.completion.chunk', created: 1, model: 'mock-standard', choices: [{ index: 0, delta, finish_reason: finish }], ...(usage ? { usage } : {}) })}\n\n`
       )
+      if (JSON.stringify(lastMessages).includes('agent-tools-test')) {
+        const toolCount = lastMessages.filter((message) => message.role === 'tool').length
+        if (toolCount === 0) {
+          chunk({
+            role: 'assistant',
+            tool_calls: [{
+              index: 0,
+              id: 'call_agent_docx',
+              type: 'function',
+              function: {
+                name: 'create_file',
+                arguments: JSON.stringify({
+                  format: 'docx',
+                  title: 'Agent 工具测试',
+                  content: '# Agent 工具测试\n\n这是通过 create_file 工具生成的文档。',
+                }),
+              },
+            }],
+          })
+          chunk({}, 'tool_calls', { prompt_tokens: 40, completion_tokens: 30, total_tokens: 70 })
+          response.end('data: [DONE]\n\n')
+          return
+        }
+        chunk({ role: 'assistant', content: '文件已生成，可在文件管理中下载。' })
+        chunk({}, 'stop', { prompt_tokens: 80, completion_tokens: 12, total_tokens: 92 })
+        response.end('data: [DONE]\n\n')
+        return
+      }
+      if (askedForCompact) {
+        chunk({ role: 'assistant', content: '压缩摘要：用户已完成上一轮问题，待继续。' })
+        chunk({}, 'stop', { prompt_tokens: 20, completion_tokens: 12, total_tokens: 32 })
+        response.end('data: [DONE]\n\n')
+        return
+      }
       if (askedForReasoning) {
         chunk({ role: 'assistant', reasoning_content: '先分析一下。' })
       } else {
@@ -119,6 +161,30 @@ const upload = async (name: string, type: string, data: Uint8Array | string) => 
   form.append('file', new Blob([copy.buffer], { type }), name)
   return await call('/api/files', { method: 'POST', body: form }) as { id: string; isImage: boolean }
 }
+const workspaceTask = async (
+  name: string,
+  type: string,
+  data: Uint8Array | string,
+  fields: Record<string, string>,
+  account = 'user'
+) => {
+  const form = new FormData()
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  form.append('file', new Blob([copy.buffer], { type }), name)
+  for (const [key, value] of Object.entries(fields)) form.append(key, value)
+  return await call('/api/workspace/tasks', { method: 'POST', body: form }, account) as {
+    task: {
+      id: string
+      status: string
+      outputName: string | null
+      outputSize: number | null
+      expiresAt: number
+      steps: { status: string }[]
+    }
+  }
+}
 const chat = (sessionId: string, modelId: string, prompt: string, extras: object = {}, account = 'user') => call('/api/chat/stream', {
   method: 'POST',
   body: JSON.stringify({ sessionId, requestId: randomUUID(), modelId, prompt, attachmentIds: [], thinking: false, ...extras }),
@@ -166,7 +232,11 @@ try {
     history: [{ role: 'user', content: '上一轮问题' }, { role: 'assistant', content: '上一轮回答' }],
   }) }) as string
   if (!stream.includes('本地测试成功')) throw new Error('流式响应失败')
-  if (lastMessages.length !== 3 || lastMessages[1]?.content !== '上一轮回答') throw new Error('聊天上下文处理错误')
+  const nonSystem = lastMessages.filter((message) => message.role !== 'system')
+  if (lastMessages[0]?.role !== 'system' || !lastSystem.includes('先判断真实意图')) {
+    throw new Error('基础提示词未注入')
+  }
+  if (nonSystem.length !== 3 || nonSystem[1]?.content !== '上一轮回答') throw new Error('聊天上下文处理错误')
   const me = await call('/api/auth/me') as { user: { id: string; quotaUsed: number } }
   if (me.user.quotaUsed !== 28) throw new Error(`积分结算错误：${me.user.quotaUsed}`)
   const saved = await call('/api/chats/test-chat', { method: 'PUT', body: JSON.stringify({ revision: 0, title: '同步测试', rootMessageId: 'm1', messages: [{ id: 'm1', role: 'user', content: '你好', files: [], createdAt: Date.now() }] }) }) as { revision: number }
@@ -193,6 +263,29 @@ try {
   if (!docStream.includes('本地测试成功')) throw new Error('PDF/DOCX 文本提取失败')
 
   const standardId = visible.models[0].id
+  const pluginList = await call('/api/plugins') as { plugins: { id: string; command: string; enabled: boolean; prompt?: unknown }[] }
+  if (pluginList.plugins.length < 13) throw new Error('内置插件未初始化')
+  if (pluginList.plugins.some((plugin) => 'prompt' in plugin)) throw new Error('用户插件列表不应返回提示词')
+  const solve = pluginList.plugins.find((plugin) => plugin.command === 'solve')
+  if (!solve || !solve.enabled) throw new Error('解题导师默认应启用')
+  await call(`/api/plugins/${solve.id}`, { method: 'PUT', body: JSON.stringify({ enabled: false }) })
+  const disabledList = await call('/api/plugins') as { plugins: { id: string; enabled: boolean }[] }
+  if (disabledList.plugins.find((plugin) => plugin.id === solve.id)?.enabled !== false) throw new Error('用户停用插件未生效')
+  await call(`/api/plugins/${solve.id}`, { method: 'PUT', body: JSON.stringify({ enabled: true }) })
+  await expectStatus(403, '/api/admin/plugins', {}, 'other')
+  await expectStatus(403, '/api/admin/prompt', {}, 'other')
+  const adminPlugins = await call('/api/admin/plugins', {}, 'admin') as { plugins: { id: string; command: string; prompt: string }[] }
+  if (!adminPlugins.plugins.find((plugin) => plugin.command === 'solve')?.prompt) throw new Error('管理员插件列表缺少提示词')
+  await expectStatus(400, '/api/admin/plugins', { method: 'POST', body: JSON.stringify({ name: '坏命令', command: 'Bad Command', prompt: 'x' }) }, 'admin')
+  await expectStatus(409, '/api/admin/plugins', { method: 'POST', body: JSON.stringify({ name: '重复', command: 'solve', prompt: 'x' }) }, 'admin')
+  const createdPlugin = await call('/api/admin/plugins', { method: 'POST', body: JSON.stringify({ name: '测试插件', command: 'test-plugin', prompt: '测试提示词', description: '测试' }) }, 'admin') as { plugin: { id: string } }
+  const userPluginList = await call('/api/plugins') as { plugins: { id: string; enabled: boolean }[] }
+  if (!userPluginList.plugins.find((plugin) => plugin.id === createdPlugin.plugin.id)?.enabled) throw new Error('自定义插件未出现在用户列表')
+  await expectStatus(403, `/api/admin/plugins/${createdPlugin.plugin.id}`, { method: 'DELETE' }, 'user')
+  await call(`/api/admin/plugins/${createdPlugin.plugin.id}`, { method: 'DELETE' }, 'admin')
+  await expectStatus(400, '/api/admin/plugins/builtin-solve', { method: 'DELETE' }, 'admin')
+  const promptInfo = await call('/api/admin/prompt', {}, 'admin') as { prompt: string; defaultPrompt: string; enabled: boolean }
+  if (!promptInfo.prompt.includes('先判断真实意图')) throw new Error('默认提示词未初始化')
   await expectStatus(400, `/api/admin/models/${standardId}`, { method: 'PATCH', body: JSON.stringify({ searchMode: 'anthropic' }) }, 'admin')
   await call(`/api/admin/models/${standardId}`, { method: 'PATCH', body: JSON.stringify({ searchMode: 'openai' }) }, 'admin')
   const searchStream = await chat('test-chat', standardId, '搜索测试', { history: [], search: true })
@@ -205,6 +298,61 @@ try {
   if (!reasoningStream.includes('thinking_delta') || !reasoningStream.includes('先分析一下。') || !reasoningStream.includes('本地测试成功。')) {
     throw new Error('OpenAI 兼容推理内容未转换为思考块')
   }
+
+  const pluginStream = await chat('test-chat', standardId, '插件测试', {
+    history: [], pluginId: 'builtin-solve', messagePluginId: 'builtin-summary',
+  })
+  if (!pluginStream.includes('本地测试成功')) throw new Error('插件流式请求失败')
+  if (!lastSystem.includes('解题导师') || !lastSystem.includes('总结提炼') || !lastSystem.includes('先判断真实意图')) {
+    throw new Error('插件提示词未注入')
+  }
+  const sessionAfterPlugin = await call('/api/chats/test-chat') as { session: { pluginId: string | null } }
+  if (sessionAfterPlugin.session.pluginId !== 'builtin-solve') throw new Error('对话插件未持久化')
+  await chat('test-chat', standardId, '清除插件', { history: [], pluginId: null })
+  const sessionAfterClear = await call('/api/chats/test-chat') as { session: { pluginId: string | null } }
+  if (sessionAfterClear.session.pluginId !== null) throw new Error('显式 null 未清除对话插件')
+
+  const autoMermaid = await chat('test-chat', standardId, '请画一个流程图', { history: [] })
+  if (!autoMermaid.includes('本地测试成功') || !lastSystem.includes('图表绘制') || !lastSystem.includes('mindmap')) {
+    throw new Error('流程图未自动匹配图表技能')
+  }
+  await chat('test-chat', standardId, '解方程 2x+3=7', { history: [] })
+  if (!lastSystem.includes('数学解题')) throw new Error('数学题未自动匹配数学技能')
+  await chat('test-chat', standardId, '用 SVG 画一个圆', { history: [] })
+  if (!lastSystem.includes('SVG 图形设计')) throw new Error('SVG 请求未自动匹配图形技能')
+  await chat('test-chat', standardId, '用 HTML 画一个卡片', { history: [] })
+  if (!lastSystem.includes('HTML 图形')) throw new Error('HTML 请求未自动匹配 HTML 技能')
+  await chat('test-chat', standardId, '请画一个流程图', { history: [], pluginId: 'builtin-solve' })
+  if (!lastSystem.includes('解题导师') || lastSystem.includes('图表绘制')) {
+    throw new Error('手动选择的插件未覆盖自动匹配')
+  }
+  await chat('test-chat', standardId, '帮我由这个主题做一个ppt', { history: [] })
+  if (!lastSystem.includes('演示文稿') || !lastSystem.includes('当前时间：') || !lastSystem.includes('web_search')) {
+    throw new Error('PPT 请求未自动匹配演示文稿技能或未注入当前时间')
+  }
+
+  const agentReply = await chat('test-chat', standardId, 'agent-tools-test', {
+    history: [], messagePluginId: 'builtin-docx',
+  })
+  if (!agentReply.includes('file_task') || !agentReply.includes('文件已生成')) {
+    throw new Error('Agent 工具循环未生成 file_task')
+  }
+  const generatedList = await call('/api/workspace/tasks?status=done&format=docx') as {
+    tasks: { id: string; title: string; origin: string; outputName: string; outputSize: number }[]
+    retentionDays: number
+  }
+  const generated = generatedList.tasks.find((task) => task.title === 'Agent 工具测试')
+  if (!generated || generated.origin !== 'chat' || !generated.outputName?.endsWith('.docx') || !generated.outputSize) {
+    throw new Error('Agent 生成的文件未进入工作区')
+  }
+  const generatedDownload = await fetch(base + `/api/workspace/tasks/${generated.id}/download`, {
+    headers: { cookie: cookie.user },
+  })
+  if (generatedDownload.status !== 200 || !(generatedDownload.headers.get('content-type') ?? '').includes('wordprocessingml')) {
+    throw new Error('Agent 生成文件下载失败')
+  }
+  const generatedBytes = new Uint8Array(await generatedDownload.arrayBuffer())
+  if (generatedBytes[0] !== 0x50 || generatedBytes[1] !== 0x4b) throw new Error('Agent 生成的 DOCX 不是有效 ZIP')
 
   const richSession = {
     revision: 1, title: '搜索与分享测试', rootMessageId: 'u1',
@@ -244,6 +392,207 @@ try {
   }) }, 'admin')
   folderChat = await call('/api/chats', {}, 'admin') as { sessions: { id: string; folderId: string | null }[] }
   if (folderChat.sessions.find((item) => item.id === 'folder-save')?.folderId !== category.id) throw new Error('后续保存覆盖了分类')
+
+  const buildMessages = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, offset) => {
+    const index = from + offset
+    const messageId = `c${index}`
+    const parentId = index === 0 ? null : `c${index - 1}`
+    const selectedChildId = index === to ? undefined : `c${index + 1}`
+    return index % 2 === 0
+      ? { id: messageId, role: 'user', content: `问题 ${index}`, files: [], parentId, selectedChildId, createdAt: Date.now() + index }
+      : { id: messageId, role: 'assistant', status: 'done', stopReason: 'end_turn', prefix: true, blocks: [{ type: 'text', text: `回答 ${index}` }], parentId, selectedChildId, createdAt: Date.now() + index }
+  })
+  const compactMessages = buildMessages(0, 11)
+  await call('/api/chats/compact-chat', { method: 'PUT', body: JSON.stringify({
+    revision: 0, title: '压缩测试', rootMessageId: 'c0', messages: compactMessages,
+  }) })
+  const compactResult = await call('/api/chats/compact-chat/compact', {
+    method: 'POST', body: JSON.stringify({ modelId: standardId, keepRecent: 2 }),
+  }) as { summary: string; compactedIds: string[]; compactedAt: number }
+  if (!compactResult.summary.includes('压缩摘要') || compactResult.compactedIds.length !== 10) {
+    throw new Error(`压缩结果不正确：${compactResult.compactedIds.length}`)
+  }
+  const compactLoaded = await call('/api/chats/compact-chat') as { session: { summary: string; compactedIds: string[]; compactedAt: number } }
+  if (!compactLoaded.session.summary.includes('压缩摘要') || compactLoaded.session.compactedIds.length !== 10) {
+    throw new Error('压缩结果未持久化')
+  }
+  const compactedHistory = await chat('compact-chat', standardId, '压缩后继续', {
+    history: [{ id: 'c0', role: 'user', content: 'COMPACTED_SECRET' }],
+  })
+  if (!compactedHistory.includes('本地测试成功')) throw new Error('压缩后流式失败')
+  if (JSON.stringify(lastMessages).includes('COMPACTED_SECRET')) throw new Error('已压缩历史仍被发送')
+  if (!lastSystem.includes('以下是本对话早期内容的摘要') || !lastSystem.includes('压缩摘要')) {
+    throw new Error('压缩摘要未注入 system')
+  }
+  await call('/api/chats/compact-chat', { method: 'PUT', body: JSON.stringify({
+    revision: 1, title: '压缩测试', rootMessageId: 'c0', summary: 'FAKE', compactedIds: [], messages: compactMessages,
+  }) })
+  const afterForged = await call('/api/chats/compact-chat') as { session: { summary: string; compactedIds: string[] } }
+  if (afterForged.session.summary === 'FAKE' || afterForged.session.compactedIds.length !== 10) {
+    throw new Error('整会话 PUT 覆盖了服务端压缩状态')
+  }
+  await call('/api/chats/compact-chat', { method: 'PUT', body: JSON.stringify({
+    revision: 2, title: '压缩测试', rootMessageId: 'c0', messages: buildMessages(0, 15),
+  }) })
+  const secondCompact = await call('/api/chats/compact-chat/compact', {
+    method: 'POST', body: JSON.stringify({ modelId: standardId, keepRecent: 2 }),
+  }) as { compactedIds: string[] }
+  if (secondCompact.compactedIds.length !== 14) throw new Error('二次压缩未累加')
+  await expectStatus(400, '/api/chats/compact-chat/compact', {
+    method: 'POST', body: JSON.stringify({ modelId: standardId, keepRecent: 20 }),
+  })
+
+  const customPrompt = 'TEST_BASE_PROMPT 先判断真实意图'
+  await call('/api/admin/prompt', { method: 'PUT', body: JSON.stringify({ prompt: customPrompt, enabled: true }) }, 'admin')
+  await chat('test-chat', standardId, '提示词测试', { history: [], pluginId: null })
+  if (!lastSystem.includes('TEST_BASE_PROMPT')) throw new Error('管理员提示词未生效')
+  await expectStatus(400, '/api/admin/prompt', { method: 'PUT', body: JSON.stringify({ prompt: 'x'.repeat(12001) }) }, 'admin')
+  await call('/api/admin/prompt/reset', { method: 'POST' }, 'admin')
+  const resetPrompt = await call('/api/admin/prompt', {}, 'admin') as { prompt: string }
+  if (!resetPrompt.prompt.includes('先判断真实意图')) throw new Error('恢复默认提示词失败')
+
+  const workspace = await workspaceTask('note.txt', 'text/plain', '季度目标：营收增长 18%，留存提升 4pt。', {
+    instruction: '整理成一份简洁的摘要',
+    format: 'docx',
+    modelId: standardId,
+  })
+  let workspaceDetail = workspace.task
+  let workspaceRetentionDays = 0
+  for (let attempt = 0; attempt < 25 && ['queued', 'processing'].includes(workspaceDetail.status); attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    const list = await call('/api/workspace/tasks') as {
+      tasks: (typeof workspaceDetail)[]
+      retentionDays: number
+    }
+    workspaceRetentionDays = list.retentionDays
+    workspaceDetail = list.tasks.find((task) => task.id === workspace.task.id) ?? workspaceDetail
+  }
+  const finalWorkspaceList = await call('/api/workspace/tasks') as {
+    tasks: (typeof workspaceDetail)[]
+    retentionDays: number
+  }
+  workspaceRetentionDays = finalWorkspaceList.retentionDays
+  workspaceDetail = finalWorkspaceList.tasks.find((task) => task.id === workspace.task.id) ?? workspaceDetail
+  if (workspaceDetail.status !== 'done') throw new Error(`文件任务未完成：${workspaceDetail.status}`)
+  if (workspaceRetentionDays !== 15) throw new Error('文件保留期不是 15 天')
+  if (!workspaceDetail.outputName?.endsWith('.docx') || !workspaceDetail.outputSize) {
+    throw new Error('文件任务没有生成 DOCX')
+  }
+  if (!workspaceDetail.steps.every((step) => step.status === 'done')) throw new Error('文件任务步骤未全部完成')
+  const retentionMs = workspaceDetail.expiresAt - Date.now()
+  if (retentionMs < 14 * 86_400_000 || retentionMs > 16 * 86_400_000) throw new Error('文件到期时间不正确')
+  const download = await fetch(base + `/api/workspace/tasks/${workspace.task.id}/download`, {
+    headers: { cookie: cookie.user },
+  })
+  if (download.status !== 200) throw new Error(`文件下载失败：${download.status}`)
+  if (!(download.headers.get('content-type') ?? '').includes('wordprocessingml')) throw new Error('文件下载内容类型不正确')
+  if (!(download.headers.get('content-disposition') ?? '').includes('attachment')) throw new Error('文件下载未设置附件头')
+  const downloaded = new Uint8Array(await download.arrayBuffer())
+  if (downloaded[0] !== 0x50 || downloaded[1] !== 0x4b) throw new Error('下载的 DOCX 不是有效 ZIP')
+  await expectStatus(404, `/api/workspace/tasks/${workspace.task.id}/download`, {}, 'other')
+
+  const invalidForm = new FormData()
+  invalidForm.append('file', new Blob([new TextEncoder().encode('x')], { type: 'application/octet-stream' }), 'bad.exe')
+  invalidForm.append('instruction', '测试')
+  invalidForm.append('format', 'docx')
+  invalidForm.append('modelId', standardId)
+  await expectStatus(400, '/api/workspace/tasks', { method: 'POST', body: invalidForm })
+  await call(`/api/workspace/tasks/${workspace.task.id}`, { method: 'DELETE' })
+  const afterWorkspaceDelete = await call('/api/workspace/tasks') as { tasks: { id: string }[] }
+  if (afterWorkspaceDelete.tasks.some((task) => task.id === workspace.task.id)) throw new Error('文件任务删除失败')
+
+  const pptTask = await workspaceTask('note.txt', 'text/plain', '季度目标：营收增长 18%，留存提升 4pt。', {
+    instruction: '做成 PPT',
+    format: 'pptx',
+    modelId: standardId,
+  })
+  let pptDetail = pptTask.task
+  for (let attempt = 0; attempt < 30 && ['queued', 'processing'].includes(pptDetail.status); attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    const single = await call(`/api/workspace/tasks/${pptTask.task.id}`) as { task: typeof pptDetail }
+    pptDetail = single.task
+  }
+  if (pptDetail.status !== 'done' || !pptDetail.outputName?.endsWith('.pptx')) {
+    throw new Error(`PPT 文件任务未完成：${pptDetail.status}`)
+  }
+  const pptDownload = await fetch(base + `/api/workspace/tasks/${pptTask.task.id}/download`, {
+    headers: { cookie: cookie.user },
+  })
+  if (pptDownload.status !== 200 || !(pptDownload.headers.get('content-type') ?? '').includes('presentationml')) {
+    throw new Error('PPT 文件下载失败')
+  }
+  const pptBytes = new Uint8Array(await pptDownload.arrayBuffer())
+  if (pptBytes[0] !== 0x50 || pptBytes[1] !== 0x4b) throw new Error('下载的 PPTX 不是有效 ZIP')
+  await call(`/api/workspace/tasks/${pptTask.task.id}`, { method: 'DELETE' })
+
+  const renderPptx = await fetch(base + '/api/workspace/render-pptx', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie: cookie.user },
+    body: JSON.stringify({
+      content: JSON.stringify({
+        title: '渲染测试',
+        slides: [
+          { layout: 'title', title: '渲染测试', subtitle: 'PPT 渲染接口' },
+          { layout: 'kpis', title: '关键指标', kpis: [{ value: '18%', label: '增长' }] },
+          { layout: 'closing', title: '谢谢' },
+        ],
+      }),
+      title: '渲染测试',
+    }),
+  })
+  if (renderPptx.status !== 200) throw new Error(`PPTX 渲染接口失败：${renderPptx.status}`)
+  if (!(renderPptx.headers.get('content-type') ?? '').includes('presentationml')) {
+    throw new Error('PPTX 渲染接口内容类型不正确')
+  }
+  const renderBytes = new Uint8Array(await renderPptx.arrayBuffer())
+  if (renderBytes[0] !== 0x50 || renderBytes[1] !== 0x4b) throw new Error('渲染的 PPTX 不是有效 ZIP')
+
+  const fromAttachment = await call('/api/workspace/tasks/from-attachment', {
+    method: 'POST',
+    body: JSON.stringify({
+      attachmentId: textFile.id,
+      instruction: '整理成 Word 文档',
+      format: 'docx',
+      modelId: standardId,
+    }),
+  }) as { task: { id: string; status: string; outputName: string | null } }
+  let fromDetail = fromAttachment.task
+  for (let attempt = 0; attempt < 25 && ['queued', 'processing'].includes(fromDetail.status); attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    const single = await call(`/api/workspace/tasks/${fromAttachment.task.id}`) as {
+      task: typeof fromDetail
+    }
+    fromDetail = single.task
+  }
+  if (fromDetail.status !== 'done' || !fromDetail.outputName?.endsWith('.docx')) {
+    throw new Error('聊天附件文件任务未生成 DOCX')
+  }
+  await expectStatus(404, `/api/workspace/tasks/${fromAttachment.task.id}`, {}, 'other')
+  await call(`/api/workspace/tasks/${fromAttachment.task.id}`, { method: 'DELETE' })
+
+  const expiredUserDir = workspaceTaskDir(me.user.id, 'expired-user-task')
+  await mkdir(expiredUserDir, { recursive: true })
+  await writeFile(path.join(expiredUserDir, 'output.docx'), 'expired')
+  db.prepare(`INSERT INTO workspace_tasks
+    (id,user_id,title,status,instruction,model_id,source_name,source_ext,output_format,plan,steps,output_name,output_file,output_size,created_at,updated_at,expires_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    'expired-user-task', me.user.id, '过期下载', 'done', 'x', standardId, 'a.txt', 'txt', 'docx',
+    '[]', '[]', 'a.docx', 'output.docx', 7, Date.now() - 1000, Date.now() - 1000, Date.now() - 1000
+  )
+  await expectStatus(410, '/api/workspace/tasks/expired-user-task/download')
+
+  const expiredDir = workspaceTaskDir('admin-id', 'expired-task')
+  await mkdir(expiredDir, { recursive: true })
+  await writeFile(path.join(expiredDir, 'output.docx'), 'expired')
+  db.prepare(`INSERT INTO workspace_tasks
+    (id,user_id,title,status,instruction,model_id,source_name,source_ext,output_format,plan,steps,created_at,updated_at,expires_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    'expired-task', 'admin-id', '过期任务', 'done', 'x', standardId, 'a.txt', 'txt', 'docx',
+    '[]', '[]', Date.now() - 1000, Date.now() - 1000, Date.now() - 1000
+  )
+  await cleanupWorkspace()
+  if (db.prepare('SELECT id FROM workspace_tasks WHERE id=?').get('expired-task')) throw new Error('过期任务未清理')
+  if (existsSync(expiredDir)) throw new Error('过期任务文件未清理')
 
   const usage = await call('/api/usage/me') as { today: { used: number; remaining: number }; recent: { searchRequests: number }[]; byModel: unknown[] }
   if (usage.today.used <= 0 || usage.byModel.length === 0) throw new Error('用户用量数据不完整')
@@ -317,7 +666,7 @@ try {
   await call('/api/auth/password', { method: 'POST', body: JSON.stringify({ currentPassword: 'testing-password', newPassword: 'new-testing-password' }) })
   await expectStatus(401, '/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'tester', password: 'testing-password' }) })
   await call('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: 'tester', password: 'new-testing-password' }) })
-  console.log('PASS: auth, admin, VIP gating, history, usage/quota, duplicate/idempotency, uploads (text/image/PDF/DOCX), isolation and Origin checks')
+  console.log('PASS: auth, admin, VIP gating, history, usage/quota, duplicate/idempotency, uploads (text/image/PDF/DOCX), isolation, Origin checks, plugins, prompts, compaction, agent tools/search, auto PPT, workspace files, PPTX rendering and 15-day cleanup')
 } finally {
   await app.close()
   upstream.closeAllConnections()

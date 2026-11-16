@@ -6,6 +6,7 @@ import {
   IconChevronDownOutline14,
   IconChevronRightOutline14,
   IconDataOutline16,
+  IconFolderOutline16,
   IconLogoutOutline16,
   IconSettingsOutline16,
 } from '../base/icons.js'
@@ -91,6 +92,7 @@ export const AccountPanel = () => {
           <div className={styles.submenu} role="menu">
             {user.role === 'admin' ? <button type="button" role="menuitem" onClick={() => run(() => navigate('/admin'))}><IconSettingsOutline16 />管理后台</button> : null}
             <button type="button" role="menuitem" onClick={() => run(() => navigate('/usage'))}><IconDataOutline16 />积分与用量</button>
+            <button type="button" role="menuitem" onClick={() => run(() => navigate('/files'))}><IconFolderOutline16 />文件管理</button>
             <button type="button" role="menuitem" onClick={() => run(() => setPasswordOpen(true))}><IconSettingsOutline16 />修改密码</button>
             <button type="button" role="menuitem" className={styles.logoutAction} onClick={() => run(() => void logout())}><IconLogoutOutline16 />退出登录</button>
           </div>

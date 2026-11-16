@@ -11,6 +11,8 @@ export type ChatInput = {
   model: string; messages: InputMessage[]; maxTokens: number; thinking: boolean
   searchMode: SearchMode
   signal: AbortSignal; usage: ChatUsage
+  /** 基础提示词 + 摘要 + 插件提示词；由服务端组装，客户端不可直接提供 */
+  system?: string
 }
 export type Provider = { id: string; name: string; type: 'openai' | 'anthropic'; base_url: string; key: string }
 export const event = (type: string, data: unknown): string => `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`

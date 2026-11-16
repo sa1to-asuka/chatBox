@@ -38,6 +38,7 @@ export async function* streamAnthropic(provider: Provider, input: ChatInput): As
       : undefined
   const params = {
     model: input.model, messages, max_tokens: input.maxTokens,
+    ...(input.system ? { system: input.system } : {}),
     ...(tools.length ? { tools } : {}),
     ...(thinking ? { thinking } : {}),
     ...(input.searchMode === 'deepseek' ? { safety_check: { level: 'high' } } : {}),

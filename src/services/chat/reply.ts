@@ -46,6 +46,19 @@ const toReplyBlock = (block: OutputBlockStart, now: number): ReplyBlock | null =
     case 'web_search_tool_result':
     case 'web_fetch_tool_result':
       return block
+    case 'file_task':
+      return {
+        type: 'file_task',
+        taskId: block.taskId,
+        sourceName: block.sourceName,
+        outputFormat: block.outputFormat,
+        title: block.title,
+        status: block.status,
+        outputName: block.outputName,
+        outputSize: block.outputSize,
+        expiresAt: block.expiresAt,
+        error: block.error,
+      }
     default:
       return null
   }
@@ -108,6 +121,15 @@ export const applyEvent = (
         }
         if (block.type === 'text' && delta.type === 'citations_delta') {
           return { ...block, citations: [...(block.citations ?? []), delta.citation] }
+        }
+        if (block.type === 'file_task' && delta.type === 'file_task_delta') {
+          return {
+            ...block,
+            ...(delta.status ? { status: delta.status } : {}),
+            ...(delta.outputName !== undefined ? { outputName: delta.outputName } : {}),
+            ...(delta.outputSize !== undefined ? { outputSize: delta.outputSize } : {}),
+            ...(delta.error ? { error: delta.error } : {}),
+          }
         }
         return block
       })
@@ -179,6 +201,7 @@ export const canContinueReply = (reply: AssistantMessage): boolean => {
         block.type === 'server_tool_use' ||
         block.type === 'web_search_tool_result' ||
         block.type === 'web_fetch_tool_result' ||
+        block.type === 'file_task' ||
         (block.type === 'text' && block.isTemplate)
     )
   ) {

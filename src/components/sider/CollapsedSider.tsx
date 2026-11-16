@@ -1,8 +1,9 @@
-import { IconPanelLeftOutline16, NewChatIcon } from '../base/icons.js'
+import { IconPanelLeftOutline16, IconPluginOutline16, NewChatIcon } from '../base/icons.js'
 import { useTranslate } from '../../i18n/index.js'
 import { setSiderCollapsed } from '../../services/settings.js'
 import { newChat } from '../../services/chat/store.js'
 import { IconButton } from '../base/IconButton.js'
+import { openPluginMarket } from '../plugins/pluginMarketState.js'
 import styles from './Sider.module.css'
 
 /** 收起后左上角的按钮组 */
@@ -24,6 +25,13 @@ export const CollapsedSider = () => {
           icon={<NewChatIcon />}
           tooltip={t('newChat')}
           onClick={newChat}
+        />
+        <IconButton
+          size="m"
+          tone="primary"
+          icon={<IconPluginOutline16 />}
+          tooltip="插件广场"
+          onClick={() => openPluginMarket()}
         />
       </div>
     </div>

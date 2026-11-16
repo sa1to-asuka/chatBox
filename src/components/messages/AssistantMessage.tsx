@@ -6,7 +6,7 @@ import { describeReply } from '../../services/chat/describe.js'
 import { canContinueReply } from '../../services/chat/reply.js'
 import { continueReply, regenerateReply } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
-import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
+import type { AssistantMessage as AssistantMessageType, FileTaskPart } from '../../services/chat/types.js'
 import { IconButton } from '../base/IconButton.js'
 import { Button } from '../base/Button.js'
 import { Markdown } from '../markdown/Markdown.js'
@@ -14,6 +14,7 @@ import { SiteThumbnails } from '../search/SiteLogo.js'
 import { navigate } from '../../services/navigation.js'
 import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js'
 import { CopyButton } from './CopyButton.js'
+import { FileTaskCard } from './FileTaskCard.js'
 import { ReplyArea } from './ReplyArea.js'
 import { useReplyView } from './useReplyView.js'
 import {
@@ -52,6 +53,7 @@ export const AssistantMessage = memo(function AssistantMessage({
     .join('\n\n')
   const copyText = responseText || notice?.text
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
+  const fileTasks = message.blocks.filter((block): block is FileTaskPart => block.type === 'file_task')
   const summaryEntry = `${message.id}-summary`
   const summarySources = view.searchResults.length > 0 ? view.searchResults : view.sources
   return (
@@ -74,6 +76,14 @@ export const AssistantMessage = memo(function AssistantMessage({
           sources={view.sources}
         />
       ) : null}
+      {fileTasks.map((task) => (
+        <FileTaskCard
+          key={task.taskId}
+          taskId={task.taskId}
+          sourceName={task.sourceName}
+          outputFormat={task.outputFormat}
+        />
+      ))}
       {waiting ? (
         <div className={styles.waiting}>
           {[0, 1, 2].map((index) => (
@@ -127,7 +137,7 @@ export const AssistantMessage = memo(function AssistantMessage({
           </span>
         </div>
       ) : null}
-      {streaming ? null : (
+      {streaming || fileTasks.length > 0 ? null : (
         <div className={styles.bottom}>
           <BranchSwitcher versions={versions} disabled={busy} onSelect={onSelectVersion} />
           <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>

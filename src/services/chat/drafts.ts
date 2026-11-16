@@ -19,7 +19,14 @@ export type DraftAttachment = {
   previewUrl: string | null
 }
 
-type Draft = { text: string; attachments: DraftAttachment[] }
+type Draft = {
+  text: string
+  attachments: DraftAttachment[]
+  /** 新对话或已有会话的对话插件；已有会话以 Session.pluginId 为准。 */
+  pluginId?: string | null
+  /** 只对下一条消息生效的插件。 */
+  messagePluginId?: string | null
+}
 
 export const EMPTY_DRAFT: Draft = { text: '', attachments: [] }
 
@@ -35,7 +42,7 @@ const updateDraft = (sessionId: string | null, update: (draft: Draft) => Draft) 
   useDrafts.setState((state) => {
     const draft = update(state.drafts.get(sessionId) ?? EMPTY_DRAFT)
     const drafts = new Map(state.drafts)
-    if (draft.text || draft.attachments.length > 0) {
+    if (draft.text || draft.attachments.length > 0 || draft.pluginId || draft.messagePluginId) {
       drafts.set(sessionId, draft)
     } else {
       drafts.delete(sessionId)
@@ -45,6 +52,12 @@ const updateDraft = (sessionId: string | null, update: (draft: Draft) => Draft) 
 
 export const setDraftText = (sessionId: string | null, text: string) =>
   updateDraft(sessionId, (draft) => ({ ...draft, text }))
+
+export const setDraftPlugin = (sessionId: string | null, pluginId: string | null) =>
+  updateDraft(sessionId, (draft) => ({ ...draft, pluginId }))
+
+export const setDraftMessagePlugin = (sessionId: string | null, messagePluginId: string | null) =>
+  updateDraft(sessionId, (draft) => ({ ...draft, messagePluginId }))
 
 const upload = (attachment: DraftAttachment, apiKey: string) => {
   // 上传任务负责记录错误，输入框的附件卡片展示失败及重试入口。

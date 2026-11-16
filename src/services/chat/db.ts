@@ -15,8 +15,16 @@ export const loadSession = async (id: string): Promise<Session | undefined> =>
   (await json<{ session: Session }>(`/api/chats/${encodeURIComponent(id)}`)).session
 export const saveSession = async (session: Session, _files: StoredFile[] = [], folderId?: string | null): Promise<void> => {
   void _files
+  // pluginId/summary/compactedIds 由服务端 meta、stream、/compact 维护，不能随整会话覆盖。
   const result = await json<{ revision: number }>(`/api/chats/${encodeURIComponent(session.id)}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...session, revision: session.revision ?? 0, ...(folderId !== undefined ? { folderId } : {}) }),
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      revision: session.revision ?? 0,
+      title: session.title,
+      rootMessageId: session.rootMessageId ?? null,
+      messages: session.messages,
+      ...(folderId !== undefined ? { folderId } : {}),
+    }),
   })
   session.revision = result.revision
 }

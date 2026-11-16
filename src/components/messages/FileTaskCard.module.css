@@ -1,0 +1,248 @@
+.card {
+  width: 100%;
+  max-width: 640px;
+  margin: 4px 0;
+  padding: 14px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sourceIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-brand-primary);
+}
+
+.sourceIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title span {
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+}
+
+.badge.processing {
+  color: var(--dsw-alias-brand-primary);
+}
+
+.badge.done {
+  color: #2f8a5b;
+}
+
+.badge.failed {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.dot {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.step.done {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.step.done .dot {
+  border-color: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-brand-primary);
+  color: #fff;
+}
+
+.step.running {
+  color: var(--dsw-alias-label-primary);
+}
+
+.step.running .dot {
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
+  animation: fileTaskPulse 1s ease-in-out infinite alternate;
+}
+
+.step.failed .dot {
+  border-color: var(--dsw-alias-state-error-primary);
+  background: var(--dsw-alias-state-error-primary);
+  color: #fff;
+}
+
+.step small {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+}
+
+.plan {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.plan > span {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.plan ol {
+  margin: 5px 0 0 17px;
+  padding: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.error {
+  margin: 10px 0 0;
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.loading {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.download {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--dsw-alias-brand-primary);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.download:hover {
+  text-decoration: underline;
+}
+
+.download small {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+}
+
+.hint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.retry {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.retry:hover {
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
+}
+
+.expiry {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+}
+
+@keyframes fileTaskPulse {
+  from { opacity: .45; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step.running .dot { animation: none; }
+}
+
+@media not all and (min-width: 768px) {
+  .card {
+    padding: 12px;
+  }
+
+  .foot {
+    flex-wrap: wrap;
+  }
+}

@@ -11,6 +11,8 @@ build/
 tmp/
 data/
 backups/
+release/
+vendor/
 .claude/launch.json
 .playwright-cli/
 .tmp-*/

@@ -362,3 +362,84 @@
     gap: 2px;
   }
 }
+
+.pluginBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 0;
+}
+
+.slashButton {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.slashButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.slashButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.compactBody p {
+  margin: 0 0 10px;
+  line-height: 1.7;
+}
+
+.compactBody p:last-child {
+  margin-bottom: 0;
+}
+
+.compactMeta {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+
+.compactNote {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.compactError {
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+}
+
+.autoChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px dashed var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.autoChip:hover {
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
+}
+
+.autoDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dsw-alias-brand-primary);
+}

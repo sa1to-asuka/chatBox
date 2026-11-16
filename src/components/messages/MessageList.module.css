@@ -35,3 +35,10 @@
   margin: 0 auto;
   padding-bottom: 24px;
 }
+
+.compactedGroup {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--dsw-alias-border-l2);
+  opacity: .85;
+}
